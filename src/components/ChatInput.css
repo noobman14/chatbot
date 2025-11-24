@@ -1,0 +1,94 @@
+.chat-area {
+  align-items: center;
+  justify-content: center;
+  width: 70%;
+  margin: 0 auto;
+  padding-top: 15px;
+  padding-bottom: 15px;
+  min-height: 16vh;
+}
+
+.chat-input-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--border);
+  font-size: 15px;
+  min-width: 50%;
+  height: auto;
+  padding: 8px 16px;
+  border-radius: 24px;
+  background-color: var(--card);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s;
+}
+
+.chat-input-container:focus-within {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--ring);
+}
+
+/* 主输入框样式 */
+.chat-input {
+  padding: 12px 0;
+  resize: none;
+  flex-grow: 1;
+  height: auto;
+  min-height: 24px;
+  text-align: left;
+  background-color: transparent;
+  transition: all 0.15s ease;
+  max-height: 200px;
+  outline: none;
+  border: none;
+  margin-right: 12px;
+  color: var(--foreground);
+}
+
+.chat-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.chat-input::placeholder {
+  text-align: left;
+  color: var(--muted-foreground);
+  opacity: 0.8;
+}
+
+/* 按钮通用样式 */
+.btn {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.send-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.send-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+}
+
+.send-button:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
