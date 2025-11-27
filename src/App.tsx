@@ -1,8 +1,6 @@
-import { useEffect } from 'react'
 import './App.css'
 import { ChatInput } from './components/ChatInput';
 import ChatMessages from './components/ChatMessages';
-import { Chatbot } from 'supersimpledev';
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { LoginPage } from './components/LoginPage';
@@ -24,13 +22,6 @@ export function App() {
   } = useChatSessions();
 
   const { user, login, logout } = useAuth();
-
-  // 设置 Chatbot 的预定义回复（示例用途）
-  useEffect(() => {
-    Chatbot.addResponses({
-      "tell me your name": `Hello ,im chatbot!`
-    });
-  }, []);
 
   if (!user) {
     return <LoginPage onLogin={login} />;
