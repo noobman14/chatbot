@@ -5,6 +5,7 @@ import { GetAiRespond } from './AiRespond';
 import { Button } from '@/components/ui/button';
 import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select"
+import { GetAiPicture } from './AiPicture';
 
 export function ChatInput({ chatMessages, setChatMessages }: any) {
   const [inputText, setInputText] = useState('');
@@ -73,10 +74,18 @@ export function ChatInput({ chatMessages, setChatMessages }: any) {
         content: msg.message.content,
       }
     })
-
+    console.log(myMsg);
     // 调用 AI 接口获取响应
-    const rawResponse = await GetAiRespond(myMsg, mode);
-    const response = rawResponse;
+    let rawResponse;
+    let response;
+    if (mode === 'enabled' || mode === 'disabled') {
+      rawResponse = await GetAiRespond(myMsg, mode);
+    }
+    else if (mode === 'picture') {
+      rawResponse = await GetAiPicture(myMsg, mode);
+    }
+    response = rawResponse;
+    console.log(response);
 
     // 如果获取到响应，更新消息列表，用真实响应替换 Loading 占位符
     if (response) {
@@ -122,9 +131,10 @@ export function ChatInput({ chatMessages, setChatMessages }: any) {
           value={inputText}
           className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0"
         />
-        <NativeSelect onChange={handleSelectChange}>
-          <NativeSelectOption value='disabled'>Fast</NativeSelectOption>
-          <NativeSelectOption value='enabled'>Think</NativeSelectOption>
+        <NativeSelect onChange={handleSelectChange} className='shrink-0 w-max'>
+          <NativeSelectOption value='disabled' className='shrink-0'>Fast</NativeSelectOption>
+          <NativeSelectOption value='enabled' className='shrink-0'>Think</NativeSelectOption>
+          <NativeSelectOption value='picture' className='shrink-0'>Picture</NativeSelectOption>
         </NativeSelect>
         <Button
           disabled={Loading}

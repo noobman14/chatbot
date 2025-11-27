@@ -9,7 +9,7 @@ export async function GetAiRespond(message: any, mode: string) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer e53df5f0-bc91-4279-a6ff-843130506fa6" // 注意：实际项目中应避免硬编码 API Key
+        "Authorization": "Bearer e53df5f0-bc91-4279-a6ff-843130506fa6"
       },
       signal: controller.signal,
       body: JSON.stringify({
@@ -36,7 +36,7 @@ export async function GetAiRespond(message: any, mode: string) {
     const data = await res.json();
     console.log(data);
     // 返回 AI 的回复内容
-    return data?.choices?.[0]?.message;
+    return (data?.choices?.[0]?.message) ? data?.choices?.[0]?.message : { content: "error", role: "assistant" };
 
   } catch (error) {
     clearTimeout(timeoutId); // 发生错误，清除超时定时器

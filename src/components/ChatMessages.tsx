@@ -29,8 +29,34 @@ interface ChatMessagesProps {
   chatMessages: ChatMessageType[];
 }
 
+
+
+/**
+ * 检查字符串是否是一个常见的图片 URL
+ * 该函数能正确处理带有查询参数的 URL
+ */
+function isImageUrl(urlString: string) {
+  if (!urlString || typeof urlString !== 'string') {
+    return false;
+  }
+
+  // 正则表达式 /\.(jpeg|jpg|png|gif|webp|avif|bmp|svg)(\?.*)?$/i 
+  // 其中的 (\?.*)? 就是用来匹配并忽略查询参数的。
+  const imageRegex = /\.(jpeg|jpg|png|gif|webp|avif|bmp|svg)(\?.*)?$/i;
+
+  try {
+    // 检查它是否是一个有效的 URL
+    new URL(urlString);
+  } catch (e) {
+    return false;
+  }
+
+  return imageRegex.test(urlString);
+}
+
 // 单条消息组件
 function ChatMessage({ message, sender, time }: ChatMessageType) {
+
   const markdownStyles = cn(
     "prose prose-sm max-w-none break-words whitespace-pre-wrap",
     "text-black dark:text-white",
@@ -40,9 +66,14 @@ function ChatMessage({ message, sender, time }: ChatMessageType) {
     // 行内代码外观自定义样式
     "[&_p_code]:bg-blue-100[&_p_code]:text-blue-700[&_p_code]:dark:bg-blue-900 [&_p_code]:dark:text-blue-200",
   );
+
+
   if (typeof message.content !== 'string') {
-    return null;
+    return 'error';
   }
+  const isImage = isImageUrl(message.content);
+
+
 
   // 格式化时间显示
   let Time;
@@ -64,7 +95,7 @@ function ChatMessage({ message, sender, time }: ChatMessageType) {
             </div>
             <CollapsibleContent>
               {<div className="mt-2 px-4 py-3 ml-15 border-l-2 border-zinc-200 dark:border-zinc-700 pl-4 Thinking-content ">
-                {/* 思考过程通常建议字体稍微淡 */}
+                {/* 思考过程字体稍淡 */}
                 <div className={cn(markdownStyles, "text-muted-foreground text-xs sm:text-sm")}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {message.reasoning_content}
@@ -88,13 +119,23 @@ function ChatMessage({ message, sender, time }: ChatMessageType) {
           {/* 如果消息内容是 Loading... 则显示加载动画，否则渲染 Markdown 内容 */}
           {message.content === 'Loading...'
             ? (<img src={LoadingImage} className='loading-img' />)
-            : (<div
-              className={markdownStyles}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}>
-                {message.content}
-              </ReactMarkdown>
-            </div>)
+            : (
+              isImage
+                ? <div><img src={message.content} alt="picture"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '400px',
+                    borderRadius: '8px',
+                    objectFit: 'contain'
+                  }}
+                /></div>
+                : <div
+                  className={markdownStyles}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>)
           }
           <p className='msg-time'>{Time}</p>
         </div >
