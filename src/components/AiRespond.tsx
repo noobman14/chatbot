@@ -9,7 +9,7 @@ export async function GetAiRespond(message: any, mode: string) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer e53df5f0-bc91-4279-a6ff-843130506fa6"
+        "Authorization": "Bearer "
       },
       signal: controller.signal,
       body: JSON.stringify({
