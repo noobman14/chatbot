@@ -10,7 +10,10 @@ import { ThemeProvider } from './components/theme-provider';
 import { Header } from './components/Header';
 
 export function App() {
-  // 使用自定义 Hooks 管理状态
+  // 先获取用户信息
+  const { user, isLoading: authLoading, register, login, logout } = useAuth();
+
+  // 使用自定义 Hooks 管理状态，传递 user 参数以监听用户变化
   const {
     sessions,
     currentChatId,
@@ -19,12 +22,19 @@ export function App() {
     switchChat,
     deleteChat,
     setChatMessages
-  } = useChatSessions();
+  } = useChatSessions(user);
 
-  const { user, login, logout } = useAuth();
+  // 等待认证检查完成
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
 
   if (!user) {
-    return <LoginPage onLogin={login} />;
+    return <LoginPage onLogin={login} onRegister={register} />;
   }
 
   return (
@@ -49,6 +59,7 @@ export function App() {
             <ChatMessages chatMessages={currentMessages} />
             {/* 输入框组件 */}
             <ChatInput
+              currentChatId={currentChatId}
               chatMessages={currentMessages}
               setChatMessages={setChatMessages}
             />

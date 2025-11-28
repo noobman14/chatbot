@@ -1,13 +1,12 @@
 //import { Chatbot } from 'supersimpledev';
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import './ChatInput.css';
-import { GetAiRespond } from './AiRespond';
 import { Button } from '@/components/ui/button';
 import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select"
-import { GetAiPicture } from './AiPicture';
+import { api } from '@/utils/api';
 
-export function ChatInput({ chatMessages, setChatMessages }: any) {
+export function ChatInput({ currentChatId, chatMessages, setChatMessages }: any) {
   const [inputText, setInputText] = useState('');
   const [Loading, setLoading] = useState(false); // 加载状态，用于禁用输入框和按钮
   const [mode, setMode] = useState('disabled');
@@ -32,8 +31,8 @@ export function ChatInput({ chatMessages, setChatMessages }: any) {
 
   // 发送消息的核心逻辑
   async function sendMessage() {
-    // 如果输入为空或正在加载中，则不发送
-    if (inputText === '' || Loading) {
+    // 如果没有当前会话、输入为空或正在加载中，则不发送
+    if (!currentChatId || inputText === '' || Loading) {
       return;
     }
     setLoading(true);
@@ -48,7 +47,8 @@ export function ChatInput({ chatMessages, setChatMessages }: any) {
       ...chatMessages,
       {
         message: {
-          content: text
+          content: text,
+          reasoning_content: ''
         },
         sender: 'user',
         id: crypto.randomUUID(),
@@ -56,58 +56,57 @@ export function ChatInput({ chatMessages, setChatMessages }: any) {
       },
       {
         message: {
-          content:
-            'Loading...'
+          content: 'Loading...',
+          reasoning_content: ''
         },
         sender: 'robot',
         id: crypto.randomUUID(),
+        time: Date.now(),
       }
     ];
 
     setChatMessages(loadingMessages);
 
-    // 准备发送给 AI 的消息历史（去掉最后的 Loading 占位符）
-    const msg = loadingMessages.slice(0, -1);
-    const myMsg = msg.map((msg: any) => {
-      return {
-        role: msg.sender === 'robot' ? 'assistant' : msg.sender,
-        content: msg.message.content,
-      }
-    })
-    console.log(myMsg);
-    // 调用 AI 接口获取响应
-    let rawResponse;
-    let response;
-    if (mode === 'enabled' || mode === 'disabled') {
-      rawResponse = await GetAiRespond(myMsg, mode);
-    }
-    else if (mode === 'picture') {
-      rawResponse = await GetAiPicture(myMsg, mode);
-    }
-    response = rawResponse;
-    console.log(response);
+    try {
+      // 调用后端接口发送消息并获取 AI 回复
+      const data = await api.sendMessage(currentChatId, {
+        content: text,
+        mode: mode
+      });
 
-    // 如果获取到响应，更新消息列表，用真实响应替换 Loading 占位符
-    if (response) {
+      // 更新消息列表，用真实响应替换 Loading 占位符
+      setChatMessages([
+        ...chatMessages,
+        data.userMessage,
+        data.aiMessage
+      ]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // 发生错误时，移除 loading 消息，显示错误提示
       setChatMessages([
         ...chatMessages,
         {
           message: {
-            content: text
+            content: text,
+            reasoning_content: ''
           },
           sender: 'user',
           id: crypto.randomUUID(),
           time: Date.now(),
         },
         {
-          message: response,
+          message: {
+            content: 'Sorry, I encountered an error while processing your request.',
+            reasoning_content: ''
+          },
           sender: 'robot',
           id: crypto.randomUUID(),
           time: Date.now(),
         }
       ]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
   return (
     <div className='chat-area'>

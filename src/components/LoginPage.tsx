@@ -6,19 +6,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bot, Loader2 } from 'lucide-react';
 
-// 定义用户接口，包含姓名、邮箱和头像 URL
-interface User {
-  name: string;
-  email: string;
-  avatar: string;
-}
-
-// 定义组件属性接口，接收登录成功后的回调函数
+// 定义组件属性接口，接收登录和注册方法
 interface LoginPageProps {
-  onLogin: (user: User) => void;
+  onLogin: (email: string, password: string) => Promise<void>;
+  onRegister: (name: string, email: string, password: string) => Promise<void>;
 }
 
-export function LoginPage({ onLogin }: LoginPageProps) {
+export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
   // 全局状态：控制加载中动画和错误信息显示
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,28 +32,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError(''); // 清除之前的错误信息
     setIsLoading(true); // 开启加载状态
 
-    // 模拟网络延迟，提升用户体验真实感
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     try {
-      // 从 localStorage 获取已注册的用户列表（模拟数据库）
-      const usersDb = JSON.parse(localStorage.getItem('chat_users_db') || '[]');
-      // 查找匹配邮箱和密码的用户
-      const user = usersDb.find((u: any) => u.email === loginEmail && u.password === loginPassword);
-
-      if (user) {
-        // 登录成功，调用父组件传递的回调函数
-        onLogin({
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar
-        });
-      } else {
-        // 登录失败，显示错误信息
-        setError('Invalid email or password');
-      }
-    } catch (err) {
-      setError('Something went wrong');
+      // 调用后端登录接口
+      await onLogin(loginEmail, loginPassword);
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
     } finally {
       setIsLoading(false); // 关闭加载状态
     }
@@ -71,41 +48,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError('');
     setIsLoading(true);
 
-    // 模拟网络延迟
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     try {
-      // 获取现有用户列表
-      const usersDb = JSON.parse(localStorage.getItem('chat_users_db') || '[]');
-
-      // 检查邮箱是否已被注册
-      if (usersDb.find((u: any) => u.email === registerEmail)) {
-        setError('Email already exists');
-        setIsLoading(false);
-        return;
-      }
-
-      // 创建新用户对象
-      const newUser = {
-        name: registerName,
-        email: registerEmail,
-        password: registerPassword,
-        // 使用 DiceBear API 根据邮箱生成唯一的随机头像
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${registerEmail}`
-      };
-
-      // 保存新用户到本地存储（模拟数据库写入）
-      usersDb.push(newUser);
-      localStorage.setItem('chat_users_db', JSON.stringify(usersDb));
-
-      // 注册成功后自动登录
-      onLogin({
-        name: newUser.name,
-        email: newUser.email,
-        avatar: newUser.avatar
-      });
-    } catch (err) {
-      setError('Failed to create account');
+      // 调用后端注册接口
+      await onRegister(registerName, registerEmail, registerPassword);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
     } finally {
       setIsLoading(false);
     }
