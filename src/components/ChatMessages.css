@@ -14,7 +14,7 @@
 
 .chat-message-container::-webkit-scrollbar {
   display: none;
-  /* Chrome/Safari */
+  /* Chrome//Safari */
 }
 
 /* --- 消息气泡 --- */
