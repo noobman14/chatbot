@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select"
 import { api } from '@/utils/api';
 
-export function ChatInput({ currentChatId, chatMessages, setChatMessages }: any) {
+export function ChatInput({ currentChatId, setChatMessages }: any) {
   const [inputText, setInputText] = useState('');
   const [Loading, setLoading] = useState(false); // 加载状态，用于禁用输入框和按钮
   const [mode, setMode] = useState('disabled');
@@ -42,68 +42,143 @@ export function ChatInput({ currentChatId, chatMessages, setChatMessages }: any)
     // 清空输入框
     setInputText('');
 
-    // 乐观更新：立即在界面上显示用户的消息和"Loading..."占位符
-    const loadingMessages = [
-      ...chatMessages,
-      {
-        message: {
-          content: text,
-          reasoning_content: ''
-        },
-        sender: 'user',
-        id: crypto.randomUUID(),
-        time: Date.now(),
-      },
-      {
-        message: {
-          content: 'Loading...',
-          reasoning_content: ''
-        },
-        sender: 'robot',
-        id: crypto.randomUUID(),
-        time: Date.now(),
-      }
-    ];
+    const newMsgId = crypto.randomUUID();
+    const newAiMsgId = crypto.randomUUID();
 
-    setChatMessages(loadingMessages);
+    // 乐观更新：立即在界面上显示用户的消息和"Loading..."占位符
+    const userMsg = {
+      message: {
+        content: text,
+        reasoning_content: ''
+      },
+      sender: 'user',
+      id: newMsgId,
+      time: Date.now(),
+    };
+
+    const aiMsgPlaceholder = {
+      message: {
+        content: 'Loading...', // 初始显示 Loading
+        reasoning_content: ''
+      },
+      sender: 'robot',
+      id: newAiMsgId,
+      time: Date.now(),
+    };
+
+    // 使用函数式更新确保基于最新状态
+    setChatMessages((prevV: any[]) => [
+      ...prevV,
+      userMsg,
+      aiMsgPlaceholder
+    ]);
+
+    // 在 try-catch 外部声明，以便在 catch 块中也能访问
+    let currentAiContent = "";
+    let currentReasoning = "";
 
     try {
-      // 调用后端接口发送消息并获取 AI 回复
-      const data = await api.sendMessage(currentChatId, {
-        content: text,
-        mode: mode
-      });
+      // 图片生成模式：使用非流式接口
+      if (mode === 'picture') {
+        const result = await api.sendMessage(currentChatId, {
+          content: text,
+          mode: mode
+        });
+        
+        currentAiContent = result.aiMessage.message.content;
+        currentReasoning = result.aiMessage.message.reasoning_content || '';
+        
+        // 更新 AI 消息内容
+        setChatMessages((prev: any[]) => {
+          const newMessages = [...prev];
+          const aiMsgIndex = newMessages.findIndex(msg => msg.id === newAiMsgId);
+          if (aiMsgIndex !== -1) {
+            newMessages[aiMsgIndex] = {
+              ...newMessages[aiMsgIndex],
+              message: {
+                content: currentAiContent,
+                reasoning_content: currentReasoning
+              }
+            };
+          }
+          return newMessages;
+        });
+      } else {
+        // 聊天模式：使用流式接口
+        let firstChunk = true;
 
-      // 更新消息列表，用真实响应替换 Loading 占位符
-      setChatMessages([
-        ...chatMessages,
-        data.userMessage,
-        data.aiMessage
-      ]);
+        for await (const chunk of api.streamMessage(currentChatId, {
+          content: text,
+          mode: mode
+        })) {
+          if (firstChunk) {
+            // 收到第一个 chunk 时，清除 "Loading..."
+            currentAiContent = "";
+            firstChunk = false;
+          }
+
+          if (chunk.type === 'thinking') {
+            currentReasoning += chunk.text;
+          } else if (chunk.type === 'content') {
+            currentAiContent += chunk.text;
+          } else if (chunk.type === 'error') {
+            // 收到服务端错误
+            currentAiContent = chunk.text;
+          }
+
+          // 实时更新 AI 消息内容
+          setChatMessages((prev: any[]) => {
+            const newMessages = [...prev];
+            const aiMsgIndex = newMessages.findIndex(msg => msg.id === newAiMsgId);
+            if (aiMsgIndex !== -1) {
+              newMessages[aiMsgIndex] = {
+                ...newMessages[aiMsgIndex],
+                message: {
+                  content: currentAiContent, // 如果还在思考，content 为空字符串(非Loading)
+                  reasoning_content: currentReasoning
+                }
+              };
+            }
+            return newMessages;
+          });
+        }
+      }
+
     } catch (error) {
       console.error('Failed to send message:', error);
-      // 发生错误时，移除 loading 消息，显示错误提示
-      setChatMessages([
-        ...chatMessages,
-        {
-          message: {
-            content: text,
-            reasoning_content: ''
-          },
-          sender: 'user',
-          id: crypto.randomUUID(),
-          time: Date.now(),
-        },
-        {
-          message: {
-            content: 'Sorry, I encountered an error while processing your request.',
-            reasoning_content: ''
-          },
-          sender: 'robot',
-          id: crypto.randomUUID(),
-          time: Date.now(),
+      // 发生错误时，更新消息显示错误
+      // 如果已经接收到内容，说明流式传输成功，不显示错误（可能只是浏览器的 chunked encoding 误报）
+      // 只有在完全没有收到内容时才显示错误
+      setChatMessages((prev: any[]) => {
+        const newMessages = [...prev];
+        const aiMsgIndex = newMessages.findIndex(msg => msg.id === newAiMsgId);
+        if (aiMsgIndex !== -1) {
+          const hasContent = currentAiContent.length > 0;
+          const hasReasoning = currentReasoning.length > 0;
+
+          // 如果已经接收到内容或推理过程，说明传输成功，只是浏览器报错
+          if (hasContent || hasReasoning) {
+            // 保留已接收的内容，不显示错误警告
+            newMessages[aiMsgIndex] = {
+              ...newMessages[aiMsgIndex],
+              message: {
+                content: currentAiContent,
+                reasoning_content: currentReasoning
+              }
+            };
+          } else {
+            // 完全没有收到内容，显示真正的错误
+            newMessages[aiMsgIndex] = {
+              ...newMessages[aiMsgIndex],
+              message: {
+                content: 'Sorry, I encountered an error while processing your request.',
+                reasoning_content: ''
+              }
+            };
+          }
         }
-      ]);
+        return newMessages;
+      });
     } finally {
       setLoading(false);
     }

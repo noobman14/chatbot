@@ -247,6 +247,103 @@ export const api = {
   },
 
   /**
+   * 流式发送消息并获取 AI 回复
+   * 使用 Server-Sent Events (SSE) 格式
+   */
+  async *streamMessage(sessionId: string, params: { content: string; mode: string }) {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      } as HeadersInit,
+      body: JSON.stringify(params)
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+      throw new Error('Unauthorized');
+    }
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // SSE 格式：事件之间用双换行分隔
+        const events = buffer.split('\n\n');
+
+        // 保留最后一个可能不完整的事件
+        buffer = events.pop() || '';
+
+        for (const event of events) {
+          if (!event.trim()) continue;
+
+          // 解析 SSE 事件
+          const lines = event.split('\n');
+          let eventType = 'message';
+          let data = '';
+
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              eventType = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              data = line.slice(5).trim();
+            }
+          }
+
+          // 如果是 done 事件，正常结束
+          if (eventType === 'done' || data === '[DONE]') {
+            return;
+          }
+
+          // 如果是错误事件，抛出异常
+          if (eventType === 'error') {
+            try {
+              const errorData = JSON.parse(data);
+              throw new Error(errorData.text || '流式响应出错');
+            } catch (e) {
+              if (e instanceof SyntaxError) {
+                throw new Error('流式响应出错');
+              }
+              throw e;
+            }
+          }
+
+          // 解析 data 中的 JSON
+          if (data && data !== '[DONE]') {
+            try {
+              const json = JSON.parse(data);
+              yield json;
+            } catch (e) {
+              console.error('Failed to parse SSE data:', data, e);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
+
+  /**
    * 获取用户信息
    */
   async getUserProfile() {
@@ -265,3 +362,4 @@ export const api = {
     }>(response);
   }
 };
+
