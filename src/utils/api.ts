@@ -218,7 +218,7 @@ export const api = {
   /**
    * 发送消息并获取 AI 回复
    */
-  async sendMessage(sessionId: string, params: { content: string; mode: string }) {
+  async sendMessage(sessionId: string, params: { content: string; mode: string; imageData?: string; imageMimeType?: string }) {
     const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages`, {
       method: 'POST',
       headers: getHeaders(),
@@ -250,7 +250,7 @@ export const api = {
    * 流式发送消息并获取 AI 回复
    * 使用 Server-Sent Events (SSE) 格式
    */
-  async *streamMessage(sessionId: string, params: { content: string; mode: string }) {
+  async *streamMessage(sessionId: string, params: { content: string; mode: string; imageData?: string; imageMimeType?: string }) {
     const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {
       method: 'POST',
       headers: {

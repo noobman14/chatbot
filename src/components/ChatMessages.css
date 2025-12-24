@@ -362,3 +362,16 @@
     /* 避免 iOS 自动缩放 */
   }
 }
+
+/* 用户上传的图片样式 */
+.user-uploaded-image-container {
+  margin-bottom: 8px;
+}
+
+.user-uploaded-image {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}

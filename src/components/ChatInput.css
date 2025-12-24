@@ -92,3 +92,50 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+
+/* 图片上传按钮 */
+.image-upload-btn {
+  color: var(--muted-foreground);
+  transition: color 0.2s;
+}
+
+.image-upload-btn:hover:not(:disabled) {
+  color: var(--foreground);
+}
+
+/* 图片预览区域 */
+.image-preview-container {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 8px;
+  margin-left: 8px;
+}
+
+.image-preview {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--destructive);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.remove-image-btn:hover {
+  transform: scale(1.1);
+}

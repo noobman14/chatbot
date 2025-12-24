@@ -7,6 +7,7 @@ import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select
 import { api } from '@/utils/api';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '@/hooks/useNotification';
+import { ImagePlus, X } from 'lucide-react';
 
 export function ChatInput({ currentChatId, setChatMessages }: any) {
   const { t } = useTranslation();
@@ -14,6 +15,12 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
   const [Loading, setLoading] = useState(false); // 加载状态，用于禁用输入框和按钮
   const [mode, setMode] = useState('disabled');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 图片上传状态
+  const [imageData, setImageData] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // 通知功能
   const { sendNotification } = useNotification();
@@ -35,18 +42,147 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
     setMode(event.target.value);
   }
 
+  // 压缩图片到指定大小（KB）
+  async function compressImage(file: File, maxSizeKB: number = 500): Promise<{ base64: string; mimeType: string; preview: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+
+          // 计算压缩比例
+          const maxSize = maxSizeKB * 1024;
+          let quality = 0.9;
+          let scale = 1;
+
+          // 如果图片尺寸很大，先缩小尺寸
+          const maxDimension = 1920;
+          if (width > maxDimension || height > maxDimension) {
+            scale = Math.min(maxDimension / width, maxDimension / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('无法创建Canvas上下文'));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 循环压缩直到满足大小要求
+          const compress = () => {
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            const base64Length = dataUrl.split(',')[1].length;
+            const sizeInBytes = (base64Length * 3) / 4;
+
+            if (sizeInBytes > maxSize && quality > 0.1) {
+              quality -= 0.1;
+              compress();
+            } else {
+              const [prefix, base64Data] = dataUrl.split(',');
+              const mimeMatch = prefix.match(/data:(.*);base64/);
+              if (mimeMatch && base64Data) {
+                resolve({
+                  base64: base64Data,
+                  mimeType: mimeMatch[1],
+                  preview: dataUrl
+                });
+              } else {
+                reject(new Error('无法解析压缩后的图片'));
+              }
+            }
+          };
+          compress();
+        };
+        img.onerror = () => reject(new Error('图片加载失败'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('文件读取失败'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 处理图片选择
+  async function handleImageSelect(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 检查文件大小（限制10MB）
+    if (file.size > 10 * 1024 * 1024) {
+      alert(t('chat.imageTooLarge'));
+      return;
+    }
+
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+      alert(t('chat.invalidImageType'));
+      return;
+    }
+
+    try {
+      // 如果图片大于500KB，进行压缩
+      if (file.size > 500 * 1024) {
+        const compressed = await compressImage(file, 500);
+        setImageData(compressed.base64);
+        setImageMimeType(compressed.mimeType);
+        setImagePreview(compressed.preview);
+      } else {
+        // 小于500KB，直接使用
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          const [prefix, base64Data] = result.split(',');
+          const mimeMatch = prefix.match(/data:(.*);base64/);
+          if (mimeMatch && base64Data) {
+            setImageData(base64Data);
+            setImageMimeType(mimeMatch[1]);
+            setImagePreview(result);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (error) {
+      console.error('图片处理失败:', error);
+      alert(t('chat.imageProcessError'));
+    }
+
+    // 重置input以便可以再次选择同一文件
+    event.target.value = '';
+  }
+
+  // 移除已选择的图片
+  function removeImage() {
+    setImageData(null);
+    setImageMimeType(null);
+    setImagePreview(null);
+  }
+
+  // 点击图片上传按钮
+  function handleImageButtonClick() {
+    fileInputRef.current?.click();
+  }
+
   // 发送消息的核心逻辑
   async function sendMessage() {
-    // 如果没有当前会话、输入为空或正在加载中，则不发送
-    if (!currentChatId || inputText === '' || Loading) {
+    // 如果没有当前会话、输入为空(且没有图片)或正在加载中，则不发送
+    if (!currentChatId || (inputText === '' && !imageData) || Loading) {
       return;
     }
     setLoading(true);
 
     const text = inputText;
+    const currentImageData = imageData;
+    const currentImageMimeType = imageMimeType;
+    const currentImagePreview = imagePreview;
 
-    // 清空输入框
+    // 清空输入框和图片
     setInputText('');
+    removeImage();
 
     const newMsgId = crypto.randomUUID();
     const newAiMsgId = crypto.randomUUID();
@@ -60,6 +196,7 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
       sender: 'user',
       id: newMsgId,
       time: Date.now(),
+      imageUrl: currentImagePreview, // 添加图片预览
     };
 
     const aiMsgPlaceholder = {
@@ -88,7 +225,9 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
       if (mode === 'picture') {
         const result = await api.sendMessage(currentChatId, {
           content: text,
-          mode: mode
+          mode: mode,
+          imageData: currentImageData || undefined,
+          imageMimeType: currentImageMimeType || undefined
         });
 
         currentAiContent = result.aiMessage.message.content;
@@ -115,7 +254,9 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
 
         for await (const chunk of api.streamMessage(currentChatId, {
           content: text,
-          mode: mode
+          mode: mode,
+          imageData: currentImageData || undefined,
+          imageMimeType: currentImageMimeType || undefined
         })) {
           if (firstChunk) {
             // 收到第一个 chunk 时，清除 "Loading..."
@@ -194,7 +335,39 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
   }
   return (
     <div className='chat-area'>
+      {/* 图片预览区域 */}
+      {imagePreview && (
+        <div className="image-preview-container">
+          <img src={imagePreview} alt="Preview" className="image-preview" />
+          <button
+            className="remove-image-btn"
+            onClick={removeImage}
+            title={t('chat.removeImage')}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
       <div className="chat-input-container">
+        {/* 隐藏的文件输入框 */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageSelect}
+          accept="image/*"
+          style={{ display: 'none' }}
+        />
+        {/* 图片上传按钮 */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleImageButtonClick}
+          disabled={Loading}
+          className="image-upload-btn shrink-0"
+          title={t('chat.uploadImage')}
+        >
+          <ImagePlus size={20} />
+        </Button>
         <Textarea
           ref={inputRef}
           placeholder={Loading ? t('common.loading') : t('chat.inputPlaceholder')}
@@ -209,6 +382,7 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
             // 按下 Escape 键清空输入框
             if (event.key === 'Escape') {
               setInputText('');
+              removeImage();
             }
           }}
           value={inputText}

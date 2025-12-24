@@ -17,7 +17,12 @@
     "hideThinking": "隐藏思考过程",
     "showThinking": "显示思考过程",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "uploadImage": "上传图片",
+    "removeImage": "移除图片",
+    "imageTooLarge": "图片大小不能超过10MB",
+    "invalidImageType": "请选择有效的图片文件",
+    "imageProcessError": "图片处理失败，请重试"
   },
   "login": {
     "title": "Chatbot AI",

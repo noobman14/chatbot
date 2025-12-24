@@ -17,7 +17,12 @@
     "hideThinking": "Hide Thinking",
     "showThinking": "Show Thinking",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "uploadImage": "Upload Image",
+    "removeImage": "Remove Image",
+    "imageTooLarge": "Image size cannot exceed 10MB",
+    "invalidImageType": "Please select a valid image file",
+    "imageProcessError": "Image processing failed, please try again"
   },
   "login": {
     "title": "Chatbot AI",

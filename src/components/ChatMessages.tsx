@@ -25,6 +25,7 @@ interface ChatMessageType {
   };
   sender: string;
   time: number;
+  imageUrl?: string; // 用户上传的图片（Base64 Data URI）
 }
 
 interface ChatMessagesProps {
@@ -64,6 +65,7 @@ function ChatMessageWithHighlight({
   sender,
   time,
   id,
+  imageUrl,
   searchKeyword,
   isMatch
 }: ChatMessageType & { searchKeyword: string; isMatch: boolean }) {
@@ -208,6 +210,16 @@ function ChatMessageWithHighlight({
           />
         )}
         <div className="chat-msg-text">
+          {/* 显示用户上传的图片 */}
+          {sender === 'user' && imageUrl && (
+            <div className="user-uploaded-image-container">
+              <img
+                src={imageUrl}
+                alt="Uploaded"
+                className="user-uploaded-image"
+              />
+            </div>
+          )}
           {renderContentWithHighlight()}
           <div className="msg-footer">
             <p className='msg-time'>{Time}</p>
@@ -414,6 +426,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
             message={chatMessage.message}
             sender={chatMessage.sender}
             time={chatMessage.time}
+            imageUrl={(chatMessage as any).imageUrl}
             searchKeyword={searchKeyword}
             isMatch={isMessageMatch(chatMessage)}
           />
