@@ -423,29 +423,19 @@ export const api = {
   },
 
   /**
-   * 流式润色 prompt
-   * 使用快速模式 AI 帮助用户优化图片生成的 prompt
-   * @param sessionId 会话 ID
-   * @param originalText 用户原始输入的文本
+   * 润色 prompt
+   * 使用 AI 优化图片生成的 prompt，不保存到聊天记录
+   * @param text 用户原始输入的文本
+   * @returns 润色后的文本
    */
-  async *polishPrompt(sessionId: string, originalText: string) {
-    const polishInstruction = `你是一个专业的图片生成 prompt 优化专家。请帮我优化以下图片生成描述，使其更加详细、具体、富有画面感，适合用于 AI 图片生成。
-
-用户原始描述：${originalText}
-
-请直接输出优化后的描述，不要有任何解释或前缀。优化后的描述应该：
-1. 保留用户原始意图
-2. 添加更多视觉细节（光线、色彩、构图等）
-3. 使用英文输出（因为图片生成模型对英文效果更好）
-4. 控制在 100 词以内`;
-
-    // 复用现有的流式消息接口
-    for await (const chunk of this.streamMessage(sessionId, {
-      content: polishInstruction,
-      mode: 'disabled' // 使用快速模式
-    })) {
-      yield chunk;
-    }
+  async polishPrompt(text: string): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/ai/polish`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ text })
+    });
+    const data = await handleResponse<{ polishedText: string }>(response);
+    return data.polishedText;
   }
 };
 

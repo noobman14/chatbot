@@ -182,27 +182,20 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
 
   // AI 润色 prompt
   async function handlePolish() {
-    if (!currentChatId || !inputText.trim() || polishing || Loading) {
+    if (!inputText.trim() || polishing || Loading) {
       return;
     }
 
     setPolishing(true);
     const originalText = inputText;
-    setInputText(''); // 清空输入框，准备接收润色结果
 
     try {
-      let polishedText = '';
-
-      for await (const chunk of api.polishPrompt(currentChatId, originalText)) {
-        if (chunk.type === 'content') {
-          polishedText += chunk.text;
-          setInputText(polishedText); // 实时更新输入框
-        }
-      }
+      // 调用润色API，直接获取结果
+      const polishedText = await api.polishPrompt(originalText);
+      setInputText(polishedText);
     } catch (error) {
       console.error('润色失败:', error);
-      // 润色失败时恢复原始内容
-      setInputText(originalText);
+      // 润色失败时保持原始内容不变
     } finally {
       setPolishing(false);
     }
