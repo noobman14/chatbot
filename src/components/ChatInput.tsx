@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select"
 import { api } from '@/utils/api';
 import { useTranslation } from 'react-i18next';
+import { useNotification } from '@/hooks/useNotification';
 
 export function ChatInput({ currentChatId, setChatMessages }: any) {
   const { t } = useTranslation();
@@ -13,6 +14,9 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
   const [Loading, setLoading] = useState(false); // 加载状态，用于禁用输入框和按钮
   const [mode, setMode] = useState('disabled');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // 通知功能
+  const { sendNotification } = useNotification();
 
   // 当加载状态结束时，自动聚焦到输入框
   useEffect(() => {
@@ -145,6 +149,10 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
           });
         }
       }
+
+      // AI 回复完成，发送通知
+      sendNotification(t('notification.newMessage'), t('notification.aiReplied'));
+      playNotificationSound();
 
     } catch (error) {
       console.error('Failed to send message:', error);

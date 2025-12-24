@@ -63,5 +63,16 @@
     "noImages": "No images yet",
     "preview": "Preview",
     "close": "Close"
+  },
+  "notification": {
+    "title": "Notification Settings",
+    "browserNotification": "Browser Notification",
+    "soundAlert": "Sound Alert",
+    "enable": "Enable",
+    "disable": "Disable",
+    "test": "Test Notification",
+    "newMessage": "New Message",
+    "aiReplied": "AI has replied to your message",
+    "permissionDenied": "Browser notification permission denied. Please enable it in browser settings."
   }
 }
