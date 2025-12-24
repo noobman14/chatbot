@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown, Pencil, Trash2, CheckSquare, Square, ListChecks } from 'lucide-react';
 
 // 定义单条消息的类型结构
 interface ChatMessageType {
@@ -28,6 +28,9 @@ interface ChatMessageType {
 
 interface ChatMessagesProps {
   chatMessages: ChatMessageType[];
+  onStartEdit?: (id: string | number, content: string) => void;
+  onDeleteMessage?: (id: string | number) => void;
+  onBatchDelete?: (ids: (string | number)[]) => void;
 }
 
 
@@ -64,8 +67,21 @@ function ChatMessageWithHighlight({
   time,
   id,
   searchKeyword,
-  isMatch
-}: ChatMessageType & { searchKeyword: string; isMatch: boolean }) {
+  isMatch,
+  onStartEdit,
+  onDelete,
+  isMultiSelectMode,
+  isSelected,
+  onToggleSelect
+}: ChatMessageType & {
+  searchKeyword: string;
+  isMatch: boolean;
+  onStartEdit?: (id: string | number, content: string) => void;
+  onDelete?: (id: string | number) => void;
+  isMultiSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string | number) => void;
+}) {
 
   const markdownStyles = cn(
     "prose prose-sm max-w-none break-words whitespace-pre-wrap",
@@ -140,7 +156,7 @@ function ChatMessageWithHighlight({
   };
 
   return (
-    <div className={cn('chat-msg-area', isMatch && searchKeyword && 'search-match')} data-message-id={id}>
+    <div className={cn('chat-msg-area group', isMatch && searchKeyword && 'search-match')} data-message-id={id}>
       {message.reasoning_content && (
         <div className='reasoning-area mb-4 w-full'>
           <Collapsible
@@ -167,7 +183,20 @@ function ChatMessageWithHighlight({
           </Collapsible>
         </div>
       )}
-      <div className={sender === 'user' ? 'chat-user-msg' : 'chat-robot-msg'}>
+      <div className={sender === 'user' ? 'chat-user-msg relative' : 'chat-robot-msg relative'}>
+        {/* 多选复选框 */}
+        {isMultiSelectMode && (
+          <button
+            onClick={() => onToggleSelect && onToggleSelect(id)}
+            className="flex-shrink-0 p-1 mr-2"
+          >
+            {isSelected ? (
+              <CheckSquare size={18} className="text-blue-500" />
+            ) : (
+              <Square size={18} className="text-zinc-400" />
+            )}
+          </button>
+        )}
         {sender === 'robot' && (
           <img src={RobotProfileImage}
             className="chat-message-profile"
@@ -175,7 +204,27 @@ function ChatMessageWithHighlight({
         )}
         <div className="chat-msg-text">
           {renderContentWithHighlight()}
-          <p className='msg-time'>{Time}</p>
+          <div className="flex items-center justify-between gap-2 mt-1">
+            <p className='msg-time'>{Time}</p>
+            {sender === 'user' && (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                <button
+                  onClick={() => onStartEdit && onStartEdit(id, message.content)}
+                  className="p-1 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+                  title="Edit"
+                >
+                  <Pencil size={12} />
+                </button>
+                <button
+                  onClick={() => onDelete && onDelete(id)}
+                  className="p-1 text-zinc-500 hover:text-red-600"
+                  title="Withdraw"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         {sender === 'user' && (
           <img src={UserProfileImage}
@@ -187,11 +236,16 @@ function ChatMessageWithHighlight({
   );
 }
 
-export function ChatMessages({ chatMessages }: ChatMessagesProps) {
+export function ChatMessages(props: ChatMessagesProps) {
+  const { chatMessages } = props;
   // 搜索相关状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  // 多选模式状态
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
 
   // 使用自定义 Hook 实现消息列表自动滚动到底部
   const chatMsgRef = useAutoScroll([chatMessages]);
@@ -286,9 +340,49 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
     return contentMatch || reasoningMatch;
   }, [searchKeyword]);
 
+  // 切换多选模式
+  const toggleMultiSelectMode = useCallback(() => {
+    setIsMultiSelectMode(prev => !prev);
+    setSelectedIds(new Set()); // 清空选中项
+  }, []);
+
+  // 切换单个消息的选中状态
+  const toggleSelect = useCallback((id: string | number) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // 全选/取消全选
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === chatMessages.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(chatMessages.map(m => m.id)));
+    }
+  }, [chatMessages, selectedIds.size]);
+
+  // 批量删除
+  const handleBatchDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`确定要删除这 ${selectedIds.size} 条消息吗？`)) return;
+
+    if (props.onBatchDelete) {
+      props.onBatchDelete(Array.from(selectedIds));
+    }
+    setSelectedIds(new Set());
+    setIsMultiSelectMode(false);
+  }, [selectedIds, props.onBatchDelete]);
+
   return (
     <div className="chat-messages-wrapper">
-      {/* 搜索栏 */}
+      {/* 工具栏：搜索 + 多选 */}
       <div className={cn("search-bar-container", isSearchOpen && "search-open")}>
         <button
           className="search-toggle-btn"
@@ -296,6 +390,15 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
           title="搜索消息 (Ctrl+F)"
         >
           <Search size={18} />
+        </button>
+
+        {/* 多选模式切换按钮 */}
+        <button
+          className={cn("search-toggle-btn ml-2", isMultiSelectMode && "bg-blue-500 text-white")}
+          onClick={toggleMultiSelectMode}
+          title="多选模式"
+        >
+          <ListChecks size={18} />
         </button>
 
         {isSearchOpen && (
@@ -348,6 +451,38 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
         )}
       </div>
 
+      {/* 多选操作栏 */}
+      {isMultiSelectMode && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 border-b">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1 px-2 py-1 text-sm rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          >
+            {selectedIds.size === chatMessages.length ? (
+              <><CheckSquare size={16} /> 取消全选</>
+            ) : (
+              <><Square size={16} /> 全选</>
+            )}
+          </button>
+          <span className="text-sm text-zinc-500">
+            已选中 {selectedIds.size} 条
+          </span>
+          <button
+            onClick={handleBatchDelete}
+            disabled={selectedIds.size === 0}
+            className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 rounded hover:bg-red-100 dark:hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={16} /> 删除选中
+          </button>
+          <button
+            onClick={toggleMultiSelectMode}
+            className="ml-auto text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+          >
+            取消
+          </button>
+        </div>
+      )}
+
       {/* 消息列表 */}
       <div className="chat-message-container" ref={chatMsgRef}>
         {chatMessages.map((chatMessage) => (
@@ -359,6 +494,11 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
             time={chatMessage.time}
             searchKeyword={searchKeyword}
             isMatch={isMessageMatch(chatMessage)}
+            onStartEdit={props.onStartEdit}
+            onDelete={props.onDeleteMessage}
+            isMultiSelectMode={isMultiSelectMode}
+            isSelected={selectedIds.has(chatMessage.id)}
+            onToggleSelect={toggleSelect}
           />
         ))}
       </div>

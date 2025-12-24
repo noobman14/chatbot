@@ -210,6 +210,13 @@ export function useChatSessions(user: { id: string } | null) {
     });
   };
 
+  // 刷新当前会话消息（用于同步本地 ID 与服务器 ID）
+  const refreshMessages = async () => {
+    if (currentChatId) {
+      await loadSessionDetails(currentChatId);
+    }
+  };
+
   return {
     sessions,
     currentChatId,
@@ -218,6 +225,7 @@ export function useChatSessions(user: { id: string } | null) {
     createNewChat,
     switchChat,
     deleteChat,
-    setChatMessages
+    setChatMessages,
+    refreshMessages
   };
 }

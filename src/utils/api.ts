@@ -30,7 +30,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error('Unauthorized');
   }
 
-  const data = await response.json();
+  // 检查响应是否为空或非 JSON
+  const text = await response.text();
+  if (!text) {
+    throw new Error('服务器返回空响应，请确保后端服务已启动');
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error('JSON 解析失败:', text.substring(0, 200));
+    throw new Error('服务器响应格式错误');
+  }
 
   // 后端返回的业务状态码不是 200，抛出错误
   if (data.code !== 200) {
@@ -247,10 +259,44 @@ export const api = {
   },
 
   /**
-   * 流式发送消息并获取 AI 回复
-   * 使用 Server-Sent Events (SSE) 格式
+   * 修改消息
    */
-  async *streamMessage(sessionId: string, params: { content: string; mode: string }) {
+  async updateMessage(sessionId: string, messageId: string, content: string) {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ content })
+    });
+    return handleResponse<{ content: string }>(response);
+  },
+
+  /**
+   * 删除消息
+   */
+  async deleteMessage(sessionId: string, messageId: string) {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * 删除指定消息及之后的所有消息
+   */
+  async deleteMessagesAfter(sessionId: string, messageId: string) {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}/after`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * 流式发送消息并获取 AI 回复
+   * 使用 Server- Sent Events (SSE) 格式
+   */
+  async * streamMessage(sessionId: string, params: { content: string; mode: string, messageId?: string }) {
     const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {
       method: 'POST',
       headers: {
@@ -360,6 +406,233 @@ export const api = {
         createdAt: number;
       };
     }>(response);
+  },
+
+  // ==================== 管理员 API ====================
+
+  /**
+   * 管理员登录
+   */
+  async adminLogin(params: { email: string; password: string }) {
+    const response = await fetch(`${API_BASE_URL}/admin/login`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(params)
+    });
+    return handleResponse<{
+      admin: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+      };
+      token: string;
+    }>(response);
+  },
+
+  /**
+   * 获取用户列表（管理员）
+   */
+  async getUsers(page: number = 1, pageSize: number = 20, keyword?: string) {
+    let url = `${API_BASE_URL}/admin/users?page=${page}&pageSize=${pageSize}`;
+    if (keyword) {
+      url += `&keyword=${encodeURIComponent(keyword)}`;
+    }
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      users: Array<{
+        id: string;
+        name: string;
+        email: string;
+        avatar: string;
+        status: string;
+        createdAt: number;
+        updatedAt: number;
+        sessionCount: number;
+        messageCount: number;
+      }>;
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+    }>(response);
+  },
+
+  /**
+   * 封禁用户（管理员）
+   */
+  async banUser(userId: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/ban`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * 解封用户（管理员）
+   */
+  async unbanUser(userId: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/unban`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * 删除用户（管理员）
+   */
+  async deleteUser(userId: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * 批量封禁用户
+   */
+  async batchBanUsers(userIds: string[]) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/batch-ban`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(userIds)
+    });
+    return handleResponse<{ affected: number }>(response);
+  },
+
+  /**
+   * 批量解封用户
+   */
+  async batchUnbanUsers(userIds: string[]) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/batch-unban`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(userIds)
+    });
+    return handleResponse<{ affected: number }>(response);
+  },
+
+  /**
+   * 批量删除用户
+   */
+  async batchDeleteUsers(userIds: string[]) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/batch-delete`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(userIds)
+    });
+    return handleResponse<{ affected: number }>(response);
+  },
+
+  // ==================== 统计 API ====================
+
+  /**
+   * 获取总览统计
+   */
+  async getOverviewStats() {
+    const response = await fetch(`${API_BASE_URL}/admin/statistics/overview`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      totalUsers: number;
+      totalSessions: number;
+      totalMessages: number;
+      userGrowth: number;
+      newUsersThisWeek: number;
+    }>(response);
+  },
+
+  /**
+   * 获取用户增长趋势
+   */
+  async getUserGrowth() {
+    const response = await fetch(`${API_BASE_URL}/admin/statistics/user-growth`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<Array<{ date: string; count: number }>>(response);
+  },
+
+  /**
+   * 获取消息趋势
+   */
+  async getMessageTrend() {
+    const response = await fetch(`${API_BASE_URL}/admin/statistics/message-trend`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<Array<{ date: string; count: number }>>(response);
+  },
+
+  /**
+   * 获取活跃用户排行
+   */
+  async getActiveRanking(limit: number = 10) {
+    const response = await fetch(`${API_BASE_URL}/admin/statistics/active-ranking?limit=${limit}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<Array<{
+      id: string;
+      name: string;
+      email: string;
+      avatar: string;
+      sessionCount: number;
+      messageCount: number;
+    }>>(response);
+  },
+
+  /**
+   * 获取24小时活动分布
+   */
+  async getHourlyActivity() {
+    const response = await fetch(`${API_BASE_URL}/admin/statistics/hourly-activity`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<Array<{ hour: number; count: number }>>(response);
+  },
+
+  /**
+   * 获取用户详细统计
+   */
+  async getUserDetail(userId: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/detail`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      id: string;
+      name: string;
+      email: string;
+      avatar: string;
+      status: string;
+      createdAt: number;
+      sessionCount: number;
+      messageCount: number;
+      apiCalls: number;
+      tokensUsed: number;
+      recentActivity: Array<{ date: string; messages: number }>;
+      sessions: Array<{
+        id: string;
+        title: string;
+        createdAt: number;
+        updatedAt: number;
+        messageCount: number;
+        messages: Array<{
+          id: string;
+          sender: string;
+          content: string;
+          time: number;
+        }>;
+      }>;
+    }>(response);
   }
 };
-

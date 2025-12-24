@@ -6,11 +6,28 @@ import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select"
 import { api } from '@/utils/api';
 
-export function ChatInput({ currentChatId, setChatMessages }: any) {
+interface ChatInputProps {
+  currentChatId: string | null;
+  chatMessages?: any[];
+  setChatMessages: (fn: (prev: any[]) => any[]) => void;
+  editingMessage?: { id: string | number; content: string } | null;
+  onCancelEdit?: () => void;
+  refreshMessages?: () => Promise<void>;
+}
+
+export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCancelEdit, refreshMessages }: ChatInputProps) {
   const [inputText, setInputText] = useState('');
   const [Loading, setLoading] = useState(false); // 加载状态，用于禁用输入框和按钮
   const [mode, setMode] = useState('disabled');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // 当 editingMessage 变化时，填充输入框
+  useEffect(() => {
+    if (editingMessage) {
+      setInputText(editingMessage.content);
+      inputRef.current?.focus();
+    }
+  }, [editingMessage]);
 
   // 当加载状态结束时，自动聚焦到输入框
   useEffect(() => {
@@ -41,6 +58,30 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
 
     // 清空输入框
     setInputText('');
+
+    // 如果是编辑模式，先删除该消息及之后的所有消息
+    if (editingMessage) {
+      try {
+        // 调用后端 API 删除该消息及之后的所有消息
+        await api.deleteMessagesAfter(currentChatId, editingMessage.id.toString());
+
+        // 更新本地状态：删除该消息及之后的所有消息
+        setChatMessages((prev: any[]) => {
+          const index = prev.findIndex(m => m.id === editingMessage.id);
+          if (index !== -1) {
+            return prev.slice(0, index);
+          }
+          return prev;
+        });
+
+        // 清除编辑状态
+        onCancelEdit?.();
+      } catch (error) {
+        console.error('Failed to delete messages:', error);
+        setLoading(false);
+        return;
+      }
+    }
 
     const newMsgId = crypto.randomUUID();
     const newAiMsgId = crypto.randomUUID();
@@ -84,10 +125,10 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
           content: text,
           mode: mode
         });
-        
+
         currentAiContent = result.aiMessage.message.content;
         currentReasoning = result.aiMessage.message.reasoning_content || '';
-        
+
         // 更新 AI 消息内容
         setChatMessages((prev: any[]) => {
           const newMessages = [...prev];
@@ -181,6 +222,13 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
       });
     } finally {
       setLoading(false);
+      // 刷新消息列表，确保本地 ID 与服务器同步
+      // 延迟一小段时间，确保服务器完成保存
+      if (refreshMessages) {
+        setTimeout(() => {
+          refreshMessages().catch(err => console.error('Failed to refresh messages:', err));
+        }, 500);
+      }
     }
   }
   return (
@@ -188,7 +236,7 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
       <div className="chat-input-container">
         <Textarea
           ref={inputRef}
-          placeholder={Loading ? "Loading..." : "Send a message to Chatbot"}
+          placeholder={Loading ? "Loading..." : (editingMessage ? "Editing message..." : "Send a message to Chatbot")}
           disabled={Loading}
           onChange={saveInputText}
           onKeyDown={(event) => {
@@ -197,14 +245,26 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
               event.preventDefault();
               sendMessage();
             }
-            // 按下 Escape 键清空输入框
+            // 按下 Escape 键取消编辑或清空输入框
             if (event.key === 'Escape') {
-              setInputText('');
+              if (editingMessage) {
+                setInputText('');
+                onCancelEdit?.();
+              } else {
+                setInputText('');
+              }
             }
           }}
           value={inputText}
           className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0"
         />
+        {editingMessage && (
+          <Button
+            onClick={() => { setInputText(''); onCancelEdit?.(); }}
+            variant="ghost"
+            className="text-red-500 hover:text-red-700"
+          >Cancel</Button>
+        )}
         <NativeSelect onChange={handleSelectChange} className='shrink-0 w-max'>
           <NativeSelectOption value='disabled' className='shrink-0'>Fast</NativeSelectOption>
           <NativeSelectOption value='enabled' className='shrink-0'>Think</NativeSelectOption>
@@ -214,8 +274,9 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
           disabled={Loading}
           onClick={sendMessage}
           className="send-button ml-3"
-        >Send</Button>
+        >{editingMessage ? 'Resend' : 'Send'}</Button>
       </div ></div>
 
   );
 }
+
