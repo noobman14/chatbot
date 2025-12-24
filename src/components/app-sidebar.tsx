@@ -16,6 +16,7 @@ import {
   SidebarMenuAction,
 } from "@/components/ui/sidebar"
 import { useTranslation } from 'react-i18next';
+import { ImageThumbnails, type ImageItem } from "./ImageThumbnails";
 
 // 定义组件属性接口
 interface AppSidebarProps {
@@ -26,6 +27,8 @@ interface AppSidebarProps {
   onDeleteChat: (id: string, e: React.MouseEvent) => void; // 删除会话的回调
   user: { name: string; email: string; avatar: string }; // 用户信息
   onLogout: () => void; // 登出回调
+  historyImages?: ImageItem[]; // 历史图片列表
+  onViewImages?: () => void; // 查看所有图片的回调
 }
 
 export function AppSidebar({
@@ -35,7 +38,9 @@ export function AppSidebar({
   onSwitchChat,
   onDeleteChat,
   user,
-  onLogout
+  onLogout,
+  historyImages = [],
+  onViewImages
 }: AppSidebarProps) {
   const { t } = useTranslation();
 
@@ -78,6 +83,13 @@ export function AppSidebar({
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
+            {/* 历史图片缩略图 */}
+            {onViewImages && (
+              <ImageThumbnails
+                images={historyImages}
+                onViewAll={onViewImages}
+              />
+            )}
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>

@@ -37,7 +37,9 @@
   "sidebar": {
     "newChat": "新建对话",
     "recentChats": "最近消息",
-    "deleteChat": "删除对话"
+    "deleteChat": "删除对话",
+    "historyImages": "历史图片",
+    "viewAll": "查看全部"
   },
   "user": {
     "upgradePro": "升级到 Pro",
@@ -51,5 +53,13 @@
     "light": "浅色",
     "dark": "深色",
     "system": "跟随系统"
+  },
+  "images": {
+    "title": "历史图片",
+    "download": "下载",
+    "backToChat": "返回对话",
+    "noImages": "暂无历史图片",
+    "preview": "预览",
+    "close": "关闭"
   }
 }

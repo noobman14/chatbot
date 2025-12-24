@@ -360,6 +360,25 @@ export const api = {
         createdAt: number;
       };
     }>(response);
+  },
+
+  /**
+   * 获取用户历史图片
+   * @param limit 限制数量（可选）
+   */
+  async getImages(limit?: number) {
+    const url = limit
+      ? `${API_BASE_URL}/images?limit=${limit}`
+      : `${API_BASE_URL}/images`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<Array<{
+      id: string;
+      url: string;
+      time: number;
+    }>>(response);
   }
 };
 

@@ -37,7 +37,9 @@
   "sidebar": {
     "newChat": "New Message",
     "recentChats": "Recent Message",
-    "deleteChat": "Delete chat"
+    "deleteChat": "Delete chat",
+    "historyImages": "History Images",
+    "viewAll": "View All"
   },
   "user": {
     "upgradePro": "Upgrade to Pro",
@@ -51,5 +53,13 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "images": {
+    "title": "Image History",
+    "download": "Download",
+    "backToChat": "Back to Chat",
+    "noImages": "No images yet",
+    "preview": "Preview",
+    "close": "Close"
   }
 }
