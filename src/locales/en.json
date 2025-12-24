@@ -15,7 +15,9 @@
     "nextMatch": "Next (Enter)",
     "clearSearch": "Clear search",
     "hideThinking": "Hide Thinking",
-    "showThinking": "Show Thinking"
+    "showThinking": "Show Thinking",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "login": {
     "title": "Chatbot AI",

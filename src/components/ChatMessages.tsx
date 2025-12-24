@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown, Copy, Check, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // 定义单条消息的类型结构
@@ -87,6 +87,7 @@ function ChatMessageWithHighlight({
   Time = dayjs(time).format('YYYY-MM-DD h:mm A');
 
   const [isOpen, setIsOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
 
   React.useEffect(() => {
     if (message.reasoning_content && !message.content) {
@@ -141,6 +142,36 @@ function ChatMessageWithHighlight({
     );
   };
 
+  // 复制内容到剪贴板（仅用于文本）
+  const handleCopy = async () => {
+    try {
+      // 以下代码用于复制图片，但由于跨域限制暂时注释
+      // if (isImage) {
+      //   try {
+      //     const response = await fetch(message.content);
+      //     const blob = await response.blob();
+      //     await navigator.clipboard.write([
+      //       new ClipboardItem({ [blob.type]: blob })
+      //     ]);
+      //   } catch {
+      //     await navigator.clipboard.writeText(message.content);
+      //   }
+      // } else {
+      //   await navigator.clipboard.writeText(message.content);
+      // }
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Copy failed:', error);
+    }
+  };
+
+  // 下载图片
+  const handleDownload = () => {
+    window.open(message.content, '_self');
+  };
+
   return (
     <div className={cn('chat-msg-area', isMatch && searchKeyword && 'search-match')} data-message-id={id}>
       {message.reasoning_content && (
@@ -177,7 +208,28 @@ function ChatMessageWithHighlight({
         )}
         <div className="chat-msg-text">
           {renderContentWithHighlight()}
-          <p className='msg-time'>{Time}</p>
+          <div className="msg-footer">
+            <p className='msg-time'>{Time}</p>
+            {message.content && message.content !== 'Loading...' && (
+              isImage ? (
+                <button
+                  className="copy-btn"
+                  onClick={handleDownload}
+                  title={t('images.download')}
+                >
+                  <Download size={14} />
+                </button>
+              ) : (
+                <button
+                  className="copy-btn"
+                  onClick={handleCopy}
+                  title={t('chat.copy')}
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              )
+            )}
+          </div>
         </div>
         {sender === 'user' && (
           <img src={UserProfileImage}

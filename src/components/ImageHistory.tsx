@@ -32,18 +32,23 @@ export function ImageHistory({ images, onBack }: ImageHistoryProps) {
   };
 
   // 下载图片
-  const downloadImage = async (url: string, id: string) => {
+  const downloadImage = async (url: string, _id: string) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `image-${id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      // 由于没有服务器跨域权限，直接打开链接下载
+      window.open(url, '_self');
+
+      // 以下代码需要服务器支持跨域，暂时注释
+      // const response = await fetch(url);
+      // const blob = await response.blob();
+      // const blobUrl = window.URL.createObjectURL(blob);
+      // const link = document.createElement('a');
+      // link.href = blobUrl;
+      // link.download = `image-${id}.png`;
+      // link.target = '_self';//解决弹出新窗口
+      // document.body.appendChild(link);
+      // link.click();
+      // document.body.removeChild(link);
+      // window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Download failed:', error);
       // 如果 fetch 失败，尝试直接打开链接

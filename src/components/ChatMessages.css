@@ -78,11 +78,48 @@
   /* Emerald 50 */
 }
 
+.msg-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
 .msg-time {
   font-size: 12px;
   color: var(--muted-foreground);
-  margin-top: 4px;
   display: block;
+  margin: 0;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.chat-msg-text:hover .copy-btn {
+  opacity: 1;
+}
+
+.copy-btn:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.copy-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .prose pre {

@@ -15,7 +15,9 @@
     "nextMatch": "下一个 (Enter)",
     "clearSearch": "清除搜索",
     "hideThinking": "隐藏思考过程",
-    "showThinking": "显示思考过程"
+    "showThinking": "显示思考过程",
+    "copy": "复制",
+    "copied": "已复制"
   },
   "login": {
     "title": "Chatbot AI",
