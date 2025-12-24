@@ -139,3 +139,21 @@
 .remove-image-btn:hover {
   transform: scale(1.1);
 }
+
+/* AI 润色按钮 */
+.polish-btn {
+  color: var(--muted-foreground);
+  transition: all 0.2s;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.polish-btn:hover:not(:disabled) {
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.polish-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

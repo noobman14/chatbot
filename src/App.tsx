@@ -13,6 +13,8 @@ import { ThemeProvider } from './components/theme-provider';
 import { Header } from './components/Header';
 import { useState, useMemo } from 'react';
 import { hideMessage, hideMessages, getHiddenMessagesForSession } from './utils/hiddenMessages';
+import { ImageHistory, type ImageItem } from './components/ImageHistory';
+import { api } from './utils/api';
 
 /**
  * 管理员应用
@@ -40,7 +42,7 @@ function AdminApp() {
  */
 function UserApp() {
   // 先获取用户信息
-  const { user, isLoading: authLoading, register, login, logout } = useAuth();
+  const { user, isLoading: authLoading, register, login, logout, updateUser } = useAuth();
 
   // 使用自定义 Hooks 管理状态，传递 user 参数以监听用户变化
   const {
@@ -68,6 +70,29 @@ function UserApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMessages, currentChatId, hiddenUpdateTrigger]);
 
+  // 历史图片状态
+  const [historyImages, setHistoryImages] = useState<ImageItem[]>([]);
+  const [viewMode, setViewMode] = useState<'chat' | 'history'>('chat');
+
+  // 加载历史图片
+  const loadHistoryImages = async () => {
+    try {
+      const images = await api.getHistoryImages();
+      setHistoryImages(images);
+    } catch (error) {
+      console.error('Failed to load history images:', error);
+    }
+  };
+
+  const handleViewImages = () => {
+    loadHistoryImages();
+    setViewMode('history');
+  };
+
+  const handleBackToChat = () => {
+    setViewMode('chat');
+  };
+
   // 等待认证检查完成
   if (authLoading) {
     return (
@@ -94,43 +119,56 @@ function UserApp() {
             onDeleteChat={deleteChat}
             user={user}
             onLogout={logout}
+            onUserUpdate={updateUser}
+            historyImages={historyImages.slice(0, 3)}
+            onViewImages={handleViewImages}
           />
 
           {/* 主内容区域 */}
           <main className="content-area">
             <Header />
-            {/* 消息展示组件 */}
-            <ChatMessages
-              chatMessages={visibleMessages}
-              onStartEdit={(id, content) => {
-                // 点击编辑按钮时，将消息内容传递给 ChatInput
-                setEditingMessage({ id, content });
-              }}
-              onDeleteMessage={(id) => {
-                if (!currentChatId) return;
-                // 前端隐藏消息，不调用后端 API
-                hideMessage(currentChatId, id.toString());
-                // 触发重新渲染
-                setHiddenUpdateTrigger(prev => prev + 1);
-              }}
-              onBatchDelete={(ids) => {
-                if (!currentChatId) return;
-                // 批量隐藏消息
-                hideMessages(currentChatId, ids.map(id => id.toString()));
-                // 触发重新渲染
-                setHiddenUpdateTrigger(prev => prev + 1);
-              }}
-            />
-            {/* 输入框组件 */}
-            <ChatInput
-              currentChatId={currentChatId}
-              chatMessages={currentMessages}
-              setChatMessages={setChatMessages}
-              editingMessage={editingMessage}
-              onCancelEdit={() => setEditingMessage(null)}
-              refreshMessages={refreshMessages}
-            />
-
+            {viewMode === 'chat' ? (
+              <>
+                {/* 消息展示组件 */}
+                <ChatMessages
+                  chatMessages={visibleMessages}
+                  userAvatar={user.avatar}
+                  onStartEdit={(id, content) => {
+                    // 点击编辑按钮时，将消息内容传递给 ChatInput
+                    setEditingMessage({ id, content });
+                  }}
+                  onDeleteMessage={(id) => {
+                    if (!currentChatId) return;
+                    // 前端隐藏消息，不调用后端 API
+                    hideMessage(currentChatId, id.toString());
+                    // 触发重新渲染
+                    setHiddenUpdateTrigger(prev => prev + 1);
+                  }}
+                  onBatchDelete={(ids) => {
+                    if (!currentChatId) return;
+                    // 批量隐藏消息
+                    hideMessages(currentChatId, ids.map(id => id.toString()));
+                    // 触发重新渲染
+                    setHiddenUpdateTrigger(prev => prev + 1);
+                  }}
+                />
+                {/* 输入框组件 */}
+                <ChatInput
+                  currentChatId={currentChatId}
+                  chatMessages={currentMessages}
+                  setChatMessages={setChatMessages}
+                  editingMessage={editingMessage}
+                  onCancelEdit={() => setEditingMessage(null)}
+                  refreshMessages={refreshMessages}
+                />
+              </>
+            ) : (
+              /* 历史图片组件 */
+              <ImageHistory
+                images={historyImages}
+                onBack={handleBackToChat}
+              />
+            )}
           </main>
         </div>
       </SidebarProvider>

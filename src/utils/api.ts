@@ -20,13 +20,18 @@ function getHeaders(): HeadersInit {
 
 /**
  * 统一处理响应
+ * @param response HTTP响应对象
+ * @param skipAuthRedirect 如果为 true，则不会在 401 时自动退出登录并刷新页面
  */
-async function handleResponse<T>(response: Response): Promise<T> {
-  // 401 表示 Token 无效或过期，清除本地数据并刷新页面
+async function handleResponse<T>(response: Response, skipAuthRedirect: boolean = false): Promise<T> {
+  // 401 表示 Token 无效或过期
   if (response.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.reload();
+    // 如果不跳过认证重定向，则清除本地数据并刷新页面
+    if (!skipAuthRedirect) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    }
     throw new Error('Unauthorized');
   }
 
@@ -65,6 +70,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(params)
     });
+    // 注册失败不应该触发自动退出
     return handleResponse<{
       user: {
         id: string;
@@ -74,7 +80,7 @@ export const api = {
         createdAt: number;
       };
       token: string;
-    }>(response);
+    }>(response, true);
   },
 
   /**
@@ -86,6 +92,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(params)
     });
+    // 登录失败不应该触发自动退出
     return handleResponse<{
       user: {
         id: string;
@@ -95,7 +102,7 @@ export const api = {
         createdAt: number;
       };
       token: string;
-    }>(response);
+    }>(response, true);
   },
 
   /**
@@ -230,7 +237,7 @@ export const api = {
   /**
    * 发送消息并获取 AI 回复
    */
-  async sendMessage(sessionId: string, params: { content: string; mode: string }) {
+  async sendMessage(sessionId: string, params: { content: string; mode: string; image_data?: string; image_mime_type?: string }) {
     const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages`, {
       method: 'POST',
       headers: getHeaders(),
@@ -431,6 +438,59 @@ export const api = {
   },
 
   /**
+   * 更新用户信息
+   */
+  async updateProfile(params: { name?: string; avatar?: string }) {
+    const response = await fetch(`${API_BASE_URL}/user/profile`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(params)
+    });
+    return handleResponse<{
+      user: {
+        id: string;
+        name: string;
+        email: string;
+        avatar: string;
+        createdAt: number;
+      };
+    }>(response);
+  },
+
+  /**
+   * 修改密码
+   */
+  async changePassword(params: { oldPassword: string; newPassword: string }) {
+    const response = await fetch(`${API_BASE_URL}/user/change-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(params)
+    });
+    // 密码错误不应该触发自动退出
+    return handleResponse<void>(response, true);
+  },
+
+  /**
+   * 获取用户历史图片
+   * @param limit 限制数量（可选）
+   */
+  async getHistoryImages(limit?: number) {
+    const url = limit
+      ? `${API_BASE_URL}/user/images?limit=${limit}`
+      : `${API_BASE_URL}/user/images`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<Array<{
+      id: string;
+      url: string;
+      time: number;
+    }>>(response);
+  },
+
+  /**
    * 获取用户列表（管理员）
    */
   async getUsers(page: number = 1, pageSize: number = 20, keyword?: string) {
@@ -464,8 +524,8 @@ export const api = {
   /**
    * 封禁用户（管理员）
    */
-  async banUser(userId: string) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/ban`, {
+  async banUser(userId: string, days?: number) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/ban${days ? `?days=${days}` : ''}`, {
       method: 'POST',
       headers: getHeaders()
     });
@@ -528,6 +588,45 @@ export const api = {
       body: JSON.stringify(userIds)
     });
     return handleResponse<{ affected: number }>(response);
+  },
+
+  /**
+   * 删除消息（管理员）
+   */
+  async adminDeleteMessage(messageId: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * 获取操作日志
+   */
+  async getAdminOperationLogs(page: number, pageSize: number) {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/operation?page=${page}&limit=${pageSize}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      logs: Array<any>;
+      total: number;
+    }>(response);
+  },
+
+  /**
+   * 获取登录日志
+   */
+  async getLoginLogs(page: number, pageSize: number) {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/login?page=${page}&limit=${pageSize}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      logs: Array<any>;
+      total: number;
+    }>(response);
   },
 
   // ==================== 统计 API ====================
@@ -634,5 +733,21 @@ export const api = {
         }>;
       }>;
     }>(response);
+  },
+
+  /**
+   * 润色 prompt
+   * 使用 AI 优化图片生成的 prompt，不保存到聊天记录
+   * @param text 用户原始输入的文本
+   * @returns 润色后的文本
+   */
+  async polishPrompt(text: string): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/ai/polish`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ text })
+    });
+    const data = await handleResponse<{ polishedText: string }>(response);
+    return data.polishedText;
   }
 };

@@ -1,6 +1,9 @@
 import { useAutoScroll } from './useAutoScroll';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+
+
+
 import remarkGfm from 'remark-gfm';
 import RobotProfileImage from '../assets/robot.png';
 import UserProfileImage from '../assets/user.png';
@@ -28,9 +31,11 @@ interface ChatMessageType {
 
 interface ChatMessagesProps {
   chatMessages: ChatMessageType[];
+
   onStartEdit?: (id: string | number, content: string) => void;
   onDeleteMessage?: (id: string | number) => void;
   onBatchDelete?: (ids: (string | number)[]) => void;
+  userAvatar?: string; // 用户头像 URL
 }
 
 
@@ -72,7 +77,8 @@ function ChatMessageWithHighlight({
   onDelete,
   isMultiSelectMode,
   isSelected,
-  onToggleSelect
+  onToggleSelect,
+  userAvatar
 }: ChatMessageType & {
   searchKeyword: string;
   isMatch: boolean;
@@ -81,7 +87,9 @@ function ChatMessageWithHighlight({
   isMultiSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: string | number) => void;
+  userAvatar?: string;
 }) {
+
 
   const markdownStyles = cn(
     "prose prose-sm max-w-none break-words whitespace-pre-wrap",
@@ -227,7 +235,7 @@ function ChatMessageWithHighlight({
           </div>
         </div>
         {sender === 'user' && (
-          <img src={UserProfileImage}
+          <img src={userAvatar || UserProfileImage}
             className="chat-message-profile"
           />
         )}
@@ -237,7 +245,9 @@ function ChatMessageWithHighlight({
 }
 
 export function ChatMessages(props: ChatMessagesProps) {
-  const { chatMessages } = props;
+  const { chatMessages, userAvatar } = props;
+
+
   // 搜索相关状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -499,6 +509,7 @@ export function ChatMessages(props: ChatMessagesProps) {
             isMultiSelectMode={isMultiSelectMode}
             isSelected={selectedIds.has(chatMessage.id)}
             onToggleSelect={toggleSelect}
+            userAvatar={userAvatar}
           />
         ))}
       </div>
