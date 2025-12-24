@@ -11,7 +11,7 @@ import { useAuth } from './hooks/useAuth';
 import { useAdminAuth } from './hooks/useAdminAuth';
 import { ThemeProvider } from './components/theme-provider';
 import { Header } from './components/Header';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { hideMessage, hideMessages, getHiddenMessagesForSession } from './utils/hiddenMessages';
 import { ImageHistory, type ImageItem } from './components/ImageHistory';
 import { api } from './utils/api';
@@ -83,6 +83,13 @@ function UserApp() {
       console.error('Failed to load history images:', error);
     }
   };
+
+  // 用户登录后自动加载历史图片
+  useEffect(() => {
+    if (user) {
+      loadHistoryImages();
+    }
+  }, [user]);
 
   const handleViewImages = () => {
     loadHistoryImages();

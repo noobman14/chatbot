@@ -16,7 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown, Pencil, Trash2, CheckSquare, Square, ListChecks } from 'lucide-react';
+import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown, Pencil, Trash2, CheckSquare, Square, ListChecks, Copy, Download } from 'lucide-react';
 
 // 定义单条消息的类型结构
 interface ChatMessageType {
@@ -27,6 +27,7 @@ interface ChatMessageType {
   };
   sender: string;
   time: number;
+  imageUrl?: string; // 用户消息附带的图片
 }
 
 interface ChatMessagesProps {
@@ -71,6 +72,7 @@ function ChatMessageWithHighlight({
   sender,
   time,
   id,
+  imageUrl,
   searchKeyword,
   isMatch,
   onStartEdit,
@@ -125,8 +127,18 @@ function ChatMessageWithHighlight({
     }
 
     if (isImage) {
+      // 下载图片函数
+      const downloadImage = async () => {
+        try {
+          window.open(message.content, '_self');
+        } catch (error) {
+          console.error('Download failed:', error);
+          window.open(message.content, '_blank');
+        }
+      };
+
       return (
-        <div>
+        <div className="relative group/image">
           <img src={message.content} alt="picture"
             style={{
               maxWidth: '100%',
@@ -135,6 +147,16 @@ function ChatMessageWithHighlight({
               objectFit: 'contain'
             }}
           />
+          {/* 图片操作按钮 - 右下角 */}
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover/image:opacity-100 transition-opacity flex gap-1">
+            <button
+              onClick={downloadImage}
+              className="p-2 bg-black/50 text-white rounded-full hover:bg-black/70"
+              title="Download"
+            >
+              <Download size={16} />
+            </button>
+          </div>
         </div>
       );
     }
@@ -196,7 +218,7 @@ function ChatMessageWithHighlight({
         {isMultiSelectMode && (
           <button
             onClick={() => onToggleSelect && onToggleSelect(id)}
-            className="flex-shrink-0 p-1 mr-2"
+            className="shrink-0 p-1 mr-2"
           >
             {isSelected ? (
               <CheckSquare size={18} className="text-blue-500" />
@@ -211,11 +233,30 @@ function ChatMessageWithHighlight({
           />
         )}
         <div className="chat-msg-text">
+          {/* 显示用户上传的图片（多模态消息） */}
+          {sender === 'user' && imageUrl && (
+            <div className="mb-2">
+              <img
+                src={imageUrl}
+                alt="Uploaded"
+                className="max-w-full max-h-48 rounded-lg object-contain"
+              />
+            </div>
+          )}
           {renderContentWithHighlight()}
           <div className="flex items-center justify-between gap-2 mt-1">
             <p className='msg-time'>{Time}</p>
             {sender === 'user' && (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(message.content);
+                  }}
+                  className="p-1 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+                  title="Copy"
+                >
+                  <Copy size={12} />
+                </button>
                 <button
                   onClick={() => onStartEdit && onStartEdit(id, message.content)}
                   className="p-1 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
@@ -229,6 +270,20 @@ function ChatMessageWithHighlight({
                   title="Withdraw"
                 >
                   <Trash2 size={12} />
+                </button>
+              </div>
+            )}
+            {/* AI 消息的复制按钮 */}
+            {sender === 'robot' && !isImage && message.content !== 'Loading...' && (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(message.content);
+                  }}
+                  className="p-1 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+                  title="Copy"
+                >
+                  <Copy size={12} />
                 </button>
               </div>
             )}
@@ -502,6 +557,7 @@ export function ChatMessages(props: ChatMessagesProps) {
             message={chatMessage.message}
             sender={chatMessage.sender}
             time={chatMessage.time}
+            imageUrl={chatMessage.imageUrl}
             searchKeyword={searchKeyword}
             isMatch={isMessageMatch(chatMessage)}
             onStartEdit={props.onStartEdit}

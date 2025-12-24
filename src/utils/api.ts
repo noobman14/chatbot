@@ -197,6 +197,7 @@ export const api = {
             reasoning_content: string;
           };
           time: number;
+          imageUrl?: string;
         }>;
         createdAt: number;
         updatedAt: number;
@@ -302,8 +303,18 @@ export const api = {
   /**
    * 流式发送消息并获取 AI 回复
    * 使用 Server- Sent Events (SSE) 格式
+   * 支持多模态（图片+文本）
    */
-  async * streamMessage(sessionId: string, params: { content: string; mode: string, messageId?: string }) {
+  async * streamMessage(sessionId: string, params: { content: string; mode: string, messageId?: string, image_data?: string, image_mime_type?: string }) {
+    // 构造符合后端 DTO 的请求体
+    const requestBody = {
+      content: params.content,
+      mode: params.mode,
+      messageId: params.messageId,
+      imageData: params.image_data,
+      imageMimeType: params.image_mime_type
+    };
+
     const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {
       method: 'POST',
       headers: {
@@ -311,7 +322,7 @@ export const api = {
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream'
       } as HeadersInit,
-      body: JSON.stringify(params)
+      body: JSON.stringify(requestBody)
     });
 
     if (response.status === 401) {
@@ -476,8 +487,8 @@ export const api = {
    */
   async getHistoryImages(limit?: number) {
     const url = limit
-      ? `${API_BASE_URL}/user/images?limit=${limit}`
-      : `${API_BASE_URL}/user/images`;
+      ? `${API_BASE_URL}/images?limit=${limit}`
+      : `${API_BASE_URL}/images`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -605,7 +616,7 @@ export const api = {
    * 获取操作日志
    */
   async getAdminOperationLogs(page: number, pageSize: number) {
-    const response = await fetch(`${API_BASE_URL}/admin/logs/operation?page=${page}&limit=${pageSize}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/operations?page=${page}&limit=${pageSize}`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -619,7 +630,7 @@ export const api = {
    * 获取登录日志
    */
   async getLoginLogs(page: number, pageSize: number) {
-    const response = await fetch(`${API_BASE_URL}/admin/logs/login?page=${page}&limit=${pageSize}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/logins?page=${page}&limit=${pageSize}`, {
       method: 'GET',
       headers: getHeaders()
     });

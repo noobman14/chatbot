@@ -9,6 +9,7 @@ export interface Message {
   sender: string;
   id: string;
   time: number;
+  imageUrl?: string; // 用户上传的图片
 }
 
 export interface ChatSession {

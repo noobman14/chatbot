@@ -227,6 +227,8 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
     setLoading(true);
 
     const text = inputText;
+    // 保存图片预览，在清空前获取
+    const currentImagePreview = imagePreview;
 
     // 清空输入框
     setInputText('');
@@ -268,6 +270,7 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
       sender: 'user',
       id: newMsgId,
       time: Date.now(),
+      imageUrl: currentImagePreview || undefined, // 包含图片预览
     };
 
     const aiMsgPlaceholder = {
@@ -320,12 +323,14 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           return newMessages;
         });
       } else {
-        // 聊天模式：使用流式接口
+        // 聊天模式：使用流式接口（支持多模态）
         let firstChunk = true;
 
         for await (const chunk of api.streamMessage(currentChatId, {
           content: text,
-          mode: mode
+          mode: mode,
+          image_data: imageData || undefined,
+          image_mime_type: imageMimeType || undefined
         })) {
           if (firstChunk) {
             // 收到第一个 chunk 时，清除 "Loading..."
@@ -435,18 +440,17 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           className="hidden"
         />
 
-        {mode === 'picture' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleImageButtonClick}
-            disabled={Loading}
-            className="mr-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
-            title={t('chat.uploadImage')}
-          >
-            <ImagePlus size={20} />
-          </Button>
-        )}
+        {/* 图片上传按钮 - 在所有模式下都显示（支持多模态对话） */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleImageButtonClick}
+          disabled={Loading}
+          className="mr-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+          title={t('chat.uploadImage')}
+        >
+          <ImagePlus size={20} />
+        </Button>
 
         <Textarea
           ref={inputRef}
