@@ -78,11 +78,48 @@
   /* Emerald 50 */
 }
 
+.msg-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
 .msg-time {
   font-size: 12px;
   color: var(--muted-foreground);
-  margin-top: 4px;
   display: block;
+  margin: 0;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.chat-msg-text:hover .copy-btn {
+  opacity: 1;
+}
+
+.copy-btn:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.copy-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .prose pre {
@@ -104,7 +141,8 @@
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  height: 100%;
+  min-height: 200px;
+  /* 关键：允许内容被压缩 */
   overflow: hidden;
   position: relative;
 }
@@ -324,4 +362,17 @@
     font-size: 16px;
     /* 避免 iOS 自动缩放 */
   }
+}
+
+/* 用户上传的图片样式 */
+.user-uploaded-image-container {
+  margin-bottom: 8px;
+}
+
+.user-uploaded-image {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border);
 }

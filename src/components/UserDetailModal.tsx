@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, User, MessageSquare, Zap, Hash, Loader2, ChevronDown, ChevronRight, Bot } from 'lucide-react';
+import { X, User, MessageSquare, Zap, Hash, Loader2, ChevronDown, ChevronRight, Bot, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '@/utils/api';
 
@@ -96,6 +96,19 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
             }
             return newSet;
         });
+    };
+
+    // 删除消息
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!confirm('确定要删除这条消息吗？')) return;
+        try {
+            await api.adminDeleteMessage(messageId);
+            // 刷新用户数据
+            const data = await api.getUserDetail(userId);
+            setUser(data);
+        } catch (err: any) {
+            alert(err.message || '删除失败');
+        }
     };
 
     return (
@@ -286,6 +299,13 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                                                                             : msg.content}
                                                                     </p>
                                                                 </div>
+                                                                <button
+                                                                    onClick={() => handleDeleteMessage(msg.id)}
+                                                                    className="flex-shrink-0 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                                                                    title="删除消息"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
                                                             </div>
                                                         ))}
                                                     </div>

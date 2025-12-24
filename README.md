@@ -1,221 +1,109 @@
-# 智能聊天机器人 (Chatbot)
+# 🤖 智能 AI 聊天机器人 (前端)
 
-一个功能完善的现代化聊天机器人应用，基于 React + TypeScript + Vite 构建，提供流畅的用户体验和丰富的交互功能。
-暂时支持聊天，后续加入文件支持，生图支持。暂时使用localstorage存储数据
+![React](https://img.shields.io/badge/React-19.1.0-blue?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-6.3.5-646CFF?logo=vite)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38B2AC?logo=tailwind-css)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## ✨ 功能特性
+这是一个基于 React 和 TypeScript 构建的现代化、响应式且功能丰富的 AI 聊天机器人应用。它支持实时流式响应、安全认证，并拥有适配桌面和移动端的精美 UI。
 
+## ✨ 核心功能
 
-### 核心功能
-- 🤖 **智能AI对话** - 支持与AI进行自然语言对话，支持Markdown格式响应
-- 💬 **多会话管理** - 支持创建、切换、删除多个聊天会话
-- 📝 **聊天历史** - 自动保存聊天记录到本地存储,刷新页面不丢失
-- 🔐 **用户认证** - 完善的登录系统，支持用户身份管理
+### 🧠 智能交互
+- **实时流式响应 (SSE)**：使用服务器发送事件 (Server-Sent Events) 实现打字机风格的 AI 回复，提供即时反馈。
+- **深度思考模式**：支持切换“思考模式”，展示 AI 的推理过程（需后端模型支持）。
+- **Markdown 支持**：完整渲染代码块、表格、列表和富文本格式。
 
-### 界面特性
-- 🎨 **现代化UI** - 基于 shadcn/ui 组件库，界面美观大方
-- 🌓 **主题切换** - 支持亮色/暗色主题自由切换
-- 📱 **响应式设计** - 完美适配桌面端和移动端
-- 🔄 **自动滚动** - 新消息自动滚动到可视区域
-- 💅 **优雅动画** - 流畅的过渡动画和交互反馈
+### 💬 会话管理
+- **多会话支持**：支持创建、重命名和删除多个聊天会话。
+- **历史记录持久化**：所有聊天记录自动保存到 `localStorage`，确保刷新页面后数据不丢失。
+- **自动命名**：根据首次交互内容智能生成会话标题（支持异步更新）。
 
-### 技术特性
-- ⚡ **快速构建** - 使用 Vite 提供极速的开发体验
-- 🎯 **类型安全** - 完整的 TypeScript 类型支持
-- 🔌 **模块化设计** - 通过自定义 Hooks 实现状态管理
-- 📦 **本地存储** - 使用 localStorage 持久化数据
+### 🎨 现代化 UI/UX
+- **响应式设计**：移动端优先的优化，包含可折叠侧边栏和自适应布局。
+- **主题系统**：原生支持深色/浅色模式，并可跟随系统设置。
+- **组件库**：基于 `shadcn/ui` 和 Radix UI 构建，提供无障碍且高质量的组件。
+- **流畅动画**：消息气泡和界面元素拥有丝滑的过渡动画。
 
-## 🛠 技术栈
+## 🛠️ 技术栈
 
-### 核心框架
-- **React 19.1.0** - 前端UI框架
-- **TypeScript 5.9.3** - 类型安全的JavaScript
-- **Vite 6.3.5** - 下一代前端构建工具
-
-### UI组件库
-- **shadcn/ui** - 基于 Radix UI 的高质量组件
-- **Tailwind CSS 4.1.17** - 实用优先的CSS框架
-- **Lucide React** - 精美的图标库
-
-### 主要依赖
-- **react-markdown** - Markdown渲染支持
-- **remark-gfm** - GitHub风格的Markdown扩展
-- **dayjs** - 轻量级日期处理库
-- **supersimpledev** - 聊天机器人核心库
-- **class-variance-authority** - CSS变体管理
-- **clsx** - 条件类名合并工具
+- **框架**: React 19, TypeScript
+- **构建工具**: Vite 6
+- **样式**: Tailwind CSS 4, CSS Modules (用于特定组件)
+- **UI 库**: shadcn/ui (Radix UI primitives)
+- **图标**: Lucide React
+- **工具库**: `date-fns` (或 dayjs), `clsx`, `tailwind-merge`
 
 ## 📁 项目结构
 
-```
-chatbot/
-├── src/
-│   ├── components/          # 组件目录
-│   │   ├── ui/             # 基础UI组件 (shadcn/ui)
-│   │   ├── AiRespond.tsx   # AI响应组件
-│   │   ├── ChatInput.tsx   # 聊天输入框
-│   │   ├── ChatMessages.tsx # 消息列表
-│   │   ├── LoginPage.tsx   # 登录页面
-│   │   ├── Header.tsx      # 页面头部
-│   │   ├── app-sidebar.tsx # 侧边栏
-│   │   ├── nav-user.tsx    # 用户导航
-│   │   ├── mode-toggle.tsx # 主题切换
-│   │   └── theme-provider.tsx # 主题提供者
-│   ├── hooks/              # 自定义Hooks
-│   │   ├── useAuth.ts      # 用户认证Hook
-│   │   ├── useChatSessions.ts # 会话管理Hook
-│   │   └── use-mobile.ts   # 移动端检测Hook
-│   ├── lib/                # 工具库
-│   │   └── utils.ts        # 工具函数
-│   ├── App.tsx             # 主应用组件
-│   ├── App.css             # 应用样式
-│   ├── index.css           # 全局样式
-│   └── main.tsx            # 应用入口
-├── public/                 # 静态资源
-├── backend-api-documentation.md # 后端API文档
-├── package.json            # 项目配置
-├── tsconfig.json           # TypeScript配置
-├── vite.config.ts          # Vite配置
-└── components.json         # shadcn/ui配置
+```bash
+src/
+├── components/          # React 组件
+│   ├── ui/             # 可复用 UI 组件 (shadcn/ui)
+│   ├── AiRespond.tsx   # AI 消息气泡及推理展示
+│   ├── ChatInput.tsx   # 消息输入区域
+│   ├── ChatMessages.tsx # 消息列表渲染
+│   └── ...
+├── hooks/              # 自定义 Hooks
+│   ├── useAuth.ts      # 认证逻辑与状态
+│   ├── useChatSessions.ts # 聊天会话 CRUD 操作
+│   └── ...
+├── lib/                # 工具函数
+│   └── utils.ts        # 辅助函数 (cn 等)
+└── App.tsx             # 主应用入口
 ```
 
 ## 🚀 快速开始
 
 ### 环境要求
-- Node.js >= 16.0.0
-- npm >= 7.0.0 或 pnpm/yarn
+- Node.js >= 18.0.0
+- npm 或 yarn
 
-### 安装依赖
+### 安装
 
-```bash
-npm install
-```
+1. 克隆仓库：
+   ```bash
+   git clone <repository-url>
+   ```
 
-### 启动开发服务器
+2. 安装依赖：
+   ```bash
+   cd chatbot-frontend
+   npm install
+   ```
 
+### 本地运行
+
+启动开发服务器：
 ```bash
 npm run dev
 ```
+应用将在 `http://localhost:5173` 访问。
 
-应用将在 `http://localhost:5173` 启动
+### 生产环境构建
 
-### 构建生产版本
-
+创建生产环境构建：
 ```bash
 npm run build
 ```
-
-构建产物将输出到 `dist/` 目录
-
-### 预览生产构建
-
+预览生产构建：
 ```bash
 npm run preview
 ```
 
-### 代码检查
+## 🔌 集成
 
-```bash
-npm run lint
-```
+本前端项目设计用于配合 **Chatbot Backend** 工作。请确保后端服务运行在 `http://localhost:8080`（默认端口），或根据需要在源代码中配置 API 端点。
 
-## 💡 使用说明
+## 🤝 贡献说明
 
-### 用户登录
-1. 首次访问时会显示登录页面
-2. 输入用户名登录（演示模式，无需密码）
-3. 登录后进入聊天界面
+1. Fork 本项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交 Pull Request
 
-### 创建和管理会话
-1. 点击侧边栏顶部的 **"新建聊天"** 按钮创建新会话
-2. 在侧边栏的历史记录中可以查看和切换所有会话
-3. 悬停在会话上可以看到删除按钮（垃圾桶图标）
-4. 当前会话会高亮显示
+## 📄 许可证
 
-### 发送消息
-1. 在底部输入框中输入消息
-2. 按回车键或点击发送按钮发送消息
-3. AI会自动响应并显示在聊天区域
-4. 支持Markdown格式的消息渲染
-
-### 主题切换
-- 点击右上角的主题切换按钮
-- 可在亮色、暗色和跟随系统三种模式间切换
-
-### 移动端使用
-- 移动端会自动切换为适配的布局
-- 侧边栏可以通过菜单按钮展开/收起
-
-## 🎯 核心功能实现
-
-### 自定义Hooks
-
-#### `useAuth` - 用户认证
-```typescript
-const { user, login, logout } = useAuth();
-```
-管理用户登录状态，数据持久化到 localStorage
-
-#### `useChatSessions` - 会话管理
-```typescript
-const {
-  sessions,          // 所有会话
-  currentChatId,     // 当前会话ID
-  currentMessages,   // 当前会话消息
-  createNewChat,     // 创建新会话
-  switchChat,        // 切换会话
-  deleteChat,        // 删除会话
-  setChatMessages    // 更新消息
-} = useChatSessions();
-```
-
-### 数据持久化
-- 聊天会话和消息保存在 `localStorage` 中
-- 用户信息保存在 `localStorage` 中
-- 主题偏好保存在 `localStorage` 中
-
-### Markdown支持
-消息支持完整的Markdown语法：
-- **粗体** 和 *斜体*
-- 代码块和行内代码
-- 列表（有序/无序）
-- 引用
-- 链接和图片
-- 表格（通过 remark-gfm）
-
-## 🔧 配置说明
-
-### Tailwind CSS
-项目使用 Tailwind CSS v4，配置文件位于 `src/index.css`
-
-### TypeScript
-- `tsconfig.json` - 基础配置
-- `tsconfig.app.json` - 应用配置
-- `tsconfig.node.json` - Node环境配置
-
-### ESLint
-使用 `eslint.config.js` 进行代码质量检查
-
-
-## 🤝 开发指南
-
-### 添加新组件
-使用 shadcn/ui CLI 添加组件：
-```bash
-npx shadcn@latest add [component-name]
-```
-
-### 代码规范
-- 使用 TypeScript 编写所有代码
-- 遵循 ESLint 规则
-- 组件使用函数式组件 + Hooks
-- CSS 优先使用 Tailwind utility classes
-
-### 状态管理
-- 使用 React Hooks 进行状态管理
-- 复杂逻辑封装为自定义 Hooks
-- 使用 localStorage 进行数据持久化
-
----
-
-**最后更新时间**: 2025-11-24
+基于 MIT 许可证分发。

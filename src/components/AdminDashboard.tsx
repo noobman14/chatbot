@@ -17,9 +17,11 @@ import {
     TrendingUp,
     BarChart3,
     Clock,
-    Eye
+    Eye,
+    FileText,
+    UserCheck
 } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { api } from '@/utils/api';
 import type { Admin } from '@/hooks/useAdminAuth';
 import { UserDetailModal } from './UserDetailModal';
@@ -68,6 +70,31 @@ interface HourlyData {
     count: number;
 }
 
+interface OperationLog {
+    id: string;
+    adminId: string;
+    operationType: string;
+    operationTypeLabel: string;
+    targetUserId: string | null;
+    targetUserEmail: string | null;
+    detail: string;
+    ipAddress: string;
+    createdAt: number;
+}
+
+interface LoginLogData {
+    id: string;
+    userId: string | null;
+    userEmail: string;
+    loginType: string;
+    loginTypeLabel: string;
+    ipAddress: string;
+    userAgent: string;
+    success: boolean;
+    failReason: string | null;
+    createdAt: number;
+}
+
 /**
  * 管理员仪表板
  * 
@@ -100,7 +127,24 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
     // 当前视图标签
-    const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'operation-logs' | 'login-logs'>('overview');
+
+    // 封禁对话框状态
+    const [banDialogOpen, setBanDialogOpen] = useState(false);
+    const [banTargetUserId, setBanTargetUserId] = useState<string | null>(null);
+    const [banDays, setBanDays] = useState<string>('0');
+
+    // 操作日志状态
+    const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
+    const [opLogPage, setOpLogPage] = useState(1);
+    const [opLogTotal, setOpLogTotal] = useState(0);
+    const [opLogLoading, setOpLogLoading] = useState(false);
+
+    // 登录日志状态
+    const [loginLogs, setLoginLogs] = useState<LoginLogData[]>([]);
+    const [loginLogPage, setLoginLogPage] = useState(1);
+    const [loginLogTotal, setLoginLogTotal] = useState(0);
+    const [loginLogLoading, setLoginLogLoading] = useState(false);
 
     // 加载统计数据
     useEffect(() => {
@@ -127,6 +171,43 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
         };
         loadStats();
     }, []);
+
+    // 加载操作日志
+    const loadOperationLogs = useCallback(async () => {
+        setOpLogLoading(true);
+        try {
+            const data = await api.getAdminOperationLogs(opLogPage, 15);
+            setOperationLogs(data.logs);
+            setOpLogTotal(data.total);
+        } catch (err) {
+            console.error('加载操作日志失败:', err);
+        } finally {
+            setOpLogLoading(false);
+        }
+    }, [opLogPage]);
+
+    // 加载登录日志
+    const loadLoginLogs = useCallback(async () => {
+        setLoginLogLoading(true);
+        try {
+            const data = await api.getLoginLogs(loginLogPage, 15);
+            setLoginLogs(data.logs);
+            setLoginLogTotal(data.total);
+        } catch (err) {
+            console.error('加载登录日志失败:', err);
+        } finally {
+            setLoginLogLoading(false);
+        }
+    }, [loginLogPage]);
+
+    // 当切换到日志标签时加载数据
+    useEffect(() => {
+        if (activeTab === 'operation-logs') {
+            loadOperationLogs();
+        } else if (activeTab === 'login-logs') {
+            loadLoginLogs();
+        }
+    }, [activeTab, loadOperationLogs, loadLoginLogs]);
 
     // 加载用户列表
     const loadUsers = useCallback(async () => {
@@ -163,17 +244,27 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
         setSearchTerm(keyword);
     };
 
-    // 用户操作
-    const handleBan = async (userId: string) => {
-        if (!confirm('确定要封禁此用户吗？')) return;
-        setActionLoading(userId);
+    // 用户操作 - 打开封禁对话框
+    const handleBan = (userId: string) => {
+        setBanTargetUserId(userId);
+        setBanDays('0');
+        setBanDialogOpen(true);
+    };
+
+    // 确认封禁
+    const confirmBan = async () => {
+        if (!banTargetUserId) return;
+        setActionLoading(banTargetUserId);
+        setBanDialogOpen(false);
         try {
-            await api.banUser(userId);
+            const days = parseInt(banDays) || 0;
+            await api.banUser(banTargetUserId, days);
             await loadUsers();
         } catch (err: any) {
             alert(err.message || '操作失败');
         } finally {
             setActionLoading(null);
+            setBanTargetUserId(null);
         }
     };
 
@@ -298,10 +389,10 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
                             </div>
                         </div>
                         {/* Tab 切换 */}
-                        <div className="flex items-center gap-2 bg-zinc-700/50 rounded-lg p-1">
+                        <div className="flex items-center gap-1 bg-zinc-700/50 rounded-lg p-1">
                             <button
                                 onClick={() => setActiveTab('overview')}
-                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'overview'
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'overview'
                                     ? 'bg-amber-500 text-white'
                                     : 'text-zinc-400 hover:text-white'
                                     }`}
@@ -310,12 +401,30 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
                             </button>
                             <button
                                 onClick={() => setActiveTab('users')}
-                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'users'
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'users'
                                     ? 'bg-amber-500 text-white'
                                     : 'text-zinc-400 hover:text-white'
                                     }`}
                             >
                                 用户管理
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('operation-logs')}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'operation-logs'
+                                    ? 'bg-amber-500 text-white'
+                                    : 'text-zinc-400 hover:text-white'
+                                    }`}
+                            >
+                                <FileText className="h-3.5 w-3.5 inline mr-1" />操作日志
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('login-logs')}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'login-logs'
+                                    ? 'bg-amber-500 text-white'
+                                    : 'text-zinc-400 hover:text-white'
+                                    }`}
+                            >
+                                <UserCheck className="h-3.5 w-3.5 inline mr-1" />登录日志
                             </button>
                         </div>
                         <Button
@@ -532,7 +641,7 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
                             </div>
                         </div>
                     </div>
-                ) : (
+                ) : activeTab === 'users' ? (
                     /* ==================== 用户管理 ==================== */
                     <div className="space-y-6">
                         {/* 搜索栏 */}
@@ -781,7 +890,179 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
                             )}
                         </div>
                     </div>
-                )}
+                ) : activeTab === 'operation-logs' ? (
+                    <div className="space-y-6">
+                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl overflow-hidden backdrop-blur-sm">
+                            <div className="p-6 border-b border-zinc-700">
+                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-amber-500" />
+                                    管理员操作日志
+                                </h2>
+                                <p className="text-sm text-zinc-400 mt-1">记录管理员对用户的所有操作</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                {opLogLoading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                                    </div>
+                                ) : operationLogs.length === 0 ? (
+                                    <div className="text-center py-12 text-zinc-400">暂无操作日志</div>
+                                ) : (
+                                    <table className="w-full">
+                                        <thead className="bg-zinc-700/30">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">时间</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">管理员</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">操作类型</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">目标用户</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">详情</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">IP地址</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-700">
+                                            {operationLogs.map(log => (
+                                                <tr key={log.id} className="hover:bg-zinc-700/30">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-300">
+                                                        {formatTime(log.createdAt)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-300">
+                                                        {log.adminId}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.operationType === 'UNBAN_USER' || log.operationType === 'BATCH_UNBAN'
+                                                            ? 'bg-green-500/20 text-green-400' :
+                                                            log.operationType === 'BAN_USER' || log.operationType === 'BATCH_BAN'
+                                                                ? 'bg-red-500/20 text-red-400' :
+                                                                log.operationType === 'DELETE_USER' || log.operationType === 'BATCH_DELETE'
+                                                                    ? 'bg-orange-500/20 text-orange-400' :
+                                                                    log.operationType === 'ADMIN_LOGIN'
+                                                                        ? 'bg-amber-500/20 text-amber-400' :
+                                                                        log.operationType === 'DELETE_MESSAGE'
+                                                                            ? 'bg-purple-500/20 text-purple-400' :
+                                                                            'bg-blue-500/20 text-blue-400'
+                                                            }`}>
+                                                            {log.operationTypeLabel}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-300">
+                                                        {log.targetUserEmail || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-400 max-w-xs truncate">
+                                                        {log.detail || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 font-mono">
+                                                        {log.ipAddress || '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                            {/* 分页 */}
+                            {operationLogs.length > 0 && (
+                                <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-700">
+                                    <p className="text-sm text-zinc-400">共 {opLogTotal} 条记录</p>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setOpLogPage(p => Math.max(1, p - 1))} disabled={opLogPage <= 1}>
+                                            <ChevronLeft className="h-4 w-4" />上一页
+                                        </Button>
+                                        <span className="text-sm text-zinc-400">第 {opLogPage} 页</span>
+                                        <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setOpLogPage(p => p + 1)} disabled={operationLogs.length < 15}>
+                                            下一页<ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : activeTab === 'login-logs' ? (
+                    <div className="space-y-6">
+                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl overflow-hidden backdrop-blur-sm">
+                            <div className="p-6 border-b border-zinc-700">
+                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                    <UserCheck className="h-5 w-5 text-amber-500" />
+                                    用户登录日志
+                                </h2>
+                                <p className="text-sm text-zinc-400 mt-1">记录所有用户和管理员的登录活动</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                {loginLogLoading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                                    </div>
+                                ) : loginLogs.length === 0 ? (
+                                    <div className="text-center py-12 text-zinc-400">暂无登录日志</div>
+                                ) : (
+                                    <table className="w-full">
+                                        <thead className="bg-zinc-700/30">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">时间</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">用户</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">类型</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">状态</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">IP地址</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase">浏览器</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-700">
+                                            {loginLogs.map(log => (
+                                                <tr key={log.id} className="hover:bg-zinc-700/30">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-300">
+                                                        {formatTime(log.createdAt)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-300">
+                                                        {log.userEmail}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.loginType === 'ADMIN_LOGIN' ? 'bg-amber-500/20 text-amber-400' :
+                                                            log.loginType === 'USER_REGISTER' ? 'bg-purple-500/20 text-purple-400' :
+                                                                'bg-blue-500/20 text-blue-400'
+                                                            }`}>
+                                                            {log.loginTypeLabel}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        {log.success ? (
+                                                            <span className="inline-flex items-center text-green-400">
+                                                                <CheckCircle className="h-4 w-4 mr-1" />成功
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center text-red-400" title={log.failReason || ''}>
+                                                                <X className="h-4 w-4 mr-1" />失败
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 font-mono">
+                                                        {log.ipAddress || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-500 max-w-xs truncate" title={log.userAgent}>
+                                                        {log.userAgent ? log.userAgent.substring(0, 40) + '...' : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                            {/* 分页 */}
+                            {loginLogs.length > 0 && (
+                                <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-700">
+                                    <p className="text-sm text-zinc-400">共 {loginLogTotal} 条记录</p>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setLoginLogPage(p => Math.max(1, p - 1))} disabled={loginLogPage <= 1}>
+                                            <ChevronLeft className="h-4 w-4" />上一页
+                                        </Button>
+                                        <span className="text-sm text-zinc-400">第 {loginLogPage} 页</span>
+                                        <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setLoginLogPage(p => p + 1)} disabled={loginLogs.length < 15}>
+                                            下一页<ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : null}
             </main>
 
             {/* 用户详情弹窗 */}
@@ -790,6 +1071,72 @@ export function AdminDashboard({ admin, onLogout }: AdminDashboardProps) {
                     userId={selectedUserId}
                     onClose={() => setSelectedUserId(null)}
                 />
+            )}
+
+            {/* 封禁对话框 */}
+            {banDialogOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 w-96 space-y-4">
+                        <h3 className="text-lg font-semibold text-white">封禁用户</h3>
+                        <p className="text-sm text-zinc-400">请选择封禁时长</p>
+
+                        <div className="grid grid-cols-4 gap-2">
+                            {[1, 3, 7, 30].map(d => (
+                                <button
+                                    key={d}
+                                    onClick={() => setBanDays(String(d))}
+                                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${banDays === String(d)
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                                        }`}
+                                >
+                                    {d}天
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setBanDays('0')}
+                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${banDays === '0'
+                                    ? 'bg-red-500 text-white'
+                                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                                    }`}
+                            >
+                                永久封禁
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-zinc-400">自定义:</span>
+                            <input
+                                type="number"
+                                min="1"
+                                value={banDays === '0' ? '' : banDays}
+                                onChange={(e) => setBanDays(e.target.value || '0')}
+                                placeholder="输入天数"
+                                className="flex-1 px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-white text-sm"
+                            />
+                            <span className="text-sm text-zinc-400">天</span>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                variant="ghost"
+                                className="flex-1 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                                onClick={() => setBanDialogOpen(false)}
+                            >
+                                取消
+                            </Button>
+                            <Button
+                                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                                onClick={confirmBan}
+                            >
+                                {parseInt(banDays) > 0 ? `封禁 ${banDays} 天` : '永久封禁'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

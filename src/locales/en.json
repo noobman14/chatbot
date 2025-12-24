@@ -1,0 +1,82 @@
+{
+  "common": {
+    "loading": "Loading..."
+  },
+  "chat": {
+    "inputPlaceholder": "Send a message to Chatbot",
+    "send": "Send",
+    "modeFast": "Fast",
+    "modeThink": "Think",
+    "modePicture": "Picture",
+    "error": "Sorry, I encountered an error while processing your request.",
+    "searchPlaceholder": "Search messages...",
+    "searchTooltip": "Search messages (Ctrl+F)",
+    "prevMatch": "Previous (Shift+Enter)",
+    "nextMatch": "Next (Enter)",
+    "clearSearch": "Clear search",
+    "hideThinking": "Hide Thinking",
+    "showThinking": "Show Thinking",
+    "copy": "Copy",
+    "copied": "Copied",
+    "uploadImage": "Upload Image",
+    "removeImage": "Remove Image",
+    "imageTooLarge": "Image size cannot exceed 10MB",
+    "invalidImageType": "Please select a valid image file",
+    "imageProcessError": "Image processing failed, please try again"
+  },
+  "login": {
+    "title": "Chatbot AI",
+    "subtitle": "Your personal AI assistant",
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "password": "Password",
+    "name": "Name",
+    "namePlaceholder": "John Doe",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "loginDescription": "Enter your email and password to access your account.",
+    "registerDescription": "Enter your details below to create your new account.",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed"
+  },
+  "sidebar": {
+    "newChat": "New Message",
+    "recentChats": "Recent Message",
+    "deleteChat": "Delete chat",
+    "historyImages": "History Images",
+    "viewAll": "View All"
+  },
+  "user": {
+    "upgradePro": "Upgrade to Pro",
+    "account": "Account",
+    "billing": "Billing",
+    "notifications": "Notifications",
+    "logout": "Log out"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "images": {
+    "title": "Image History",
+    "download": "Download",
+    "backToChat": "Back to Chat",
+    "noImages": "No images yet",
+    "preview": "Preview",
+    "close": "Close"
+  },
+  "notification": {
+    "title": "Notification Settings",
+    "browserNotification": "Browser Notification",
+    "enable": "Enable",
+    "disable": "Disable",
+    "test": "Test Notification",
+    "newMessage": "New Message",
+    "aiReplied": "AI has replied to your message",
+    "permissionDenied": "Browser notification permission denied. Please enable it in browser settings."
+  }
+}

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bot, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // 定义组件属性接口，接收登录和注册方法
 interface LoginPageProps {
@@ -13,6 +14,8 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
+  const { t } = useTranslation();
+
   // 全局状态：控制加载中动画和错误信息显示
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,7 +39,7 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
       // 调用后端登录接口
       await onLogin(loginEmail, loginPassword);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || t('login.loginFailed'));
     } finally {
       setIsLoading(false); // 关闭加载状态
     }
@@ -52,7 +55,7 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
       // 调用后端注册接口
       await onRegister(registerName, registerEmail, registerPassword);
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      setError(err.message || t('login.registerFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -66,43 +69,43 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-50">
             <Bot className="h-8 w-8 text-white dark:text-zinc-900" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Chatbot AI</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('login.title')}</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Your personal AI assistant
+            {t('login.subtitle')}
           </p>
         </div>
 
         {/* 使用 Tabs 组件切换登录和注册视图 */}
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login">{t('login.login')}</TabsTrigger>
+            <TabsTrigger value="register">{t('login.register')}</TabsTrigger>
           </TabsList>
 
           {/* 登录表单内容 */}
           <TabsContent value="login">
             <Card>
               <CardHeader>
-                <CardTitle>Login</CardTitle>
+                <CardTitle>{t('login.login')}</CardTitle>
                 <CardDescription>
-                  Enter your email and password to access your account.
+                  {t('login.loginDescription')}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleLogin} className="flex flex-col gap-6">
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t('login.email')}</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="name@example.com"
+                      placeholder={t('login.emailPlaceholder')}
                       required
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">{t('login.password')}</Label>
                     <Input
                       id="password"
                       type="password"
@@ -118,7 +121,7 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
                   <Button className="w-full" type="submit" disabled={isLoading}>
                     {/* 加载中显示 Spinner */}
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
+                    {t('login.signIn')}
                   </Button>
                 </CardFooter>
               </form>
@@ -129,36 +132,36 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
           <TabsContent value="register">
             <Card>
               <CardHeader>
-                <CardTitle>Create an account</CardTitle>
+                <CardTitle>{t('login.createAccount')}</CardTitle>
                 <CardDescription>
-                  Enter your details below to create your new account.
+                  {t('login.registerDescription')}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleRegister} className="flex flex-col gap-6">
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="register-name">Name</Label>
+                    <Label htmlFor="register-name">{t('login.name')}</Label>
                     <Input
                       id="register-name"
-                      placeholder="John Doe"
+                      placeholder={t('login.namePlaceholder')}
                       required
                       value={registerName}
                       onChange={(e) => setRegisterName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
+                    <Label htmlFor="register-email">{t('login.email')}</Label>
                     <Input
                       id="register-email"
                       type="email"
-                      placeholder="name@example.com"
+                      placeholder={t('login.emailPlaceholder')}
                       required
                       value={registerEmail}
                       onChange={(e) => setRegisterEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
+                    <Label htmlFor="register-password">{t('login.password')}</Label>
                     <Input
                       id="register-password"
                       type="password"
@@ -172,7 +175,7 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
                 <CardFooter>
                   <Button className="w-full" type="submit" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Account
+                    {t('login.createAccount')}
                   </Button>
                 </CardFooter>
               </form>
