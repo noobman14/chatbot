@@ -67,7 +67,6 @@
   "notification": {
     "title": "Notification Settings",
     "browserNotification": "Browser Notification",
-    "soundAlert": "Sound Alert",
     "enable": "Enable",
     "disable": "Disable",
     "test": "Test Notification",

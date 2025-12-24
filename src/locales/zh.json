@@ -67,7 +67,6 @@
   "notification": {
     "title": "通知设置",
     "browserNotification": "浏览器通知",
-    "soundAlert": "声音提醒",
     "enable": "开启",
     "disable": "关闭",
     "test": "测试通知",

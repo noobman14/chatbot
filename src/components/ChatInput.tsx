@@ -152,7 +152,6 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
 
       // AI 回复完成，发送通知
       sendNotification(t('notification.newMessage'), t('notification.aiReplied'));
-      playNotificationSound();
 
     } catch (error) {
       console.error('Failed to send message:', error);
