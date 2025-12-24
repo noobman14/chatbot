@@ -169,7 +169,8 @@ function ChatMessageWithHighlight({
 
   // 下载图片
   const handleDownload = () => {
-    window.open(message.content, '_self');
+    window.open(message.content, '_self')
+      ;
   };
 
   return (
