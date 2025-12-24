@@ -17,7 +17,7 @@ export function App() {
   const { t } = useTranslation();
 
   // 先获取用户信息
-  const { user, isLoading: authLoading, register, login, logout } = useAuth();
+  const { user, isLoading: authLoading, register, login, logout, updateUser } = useAuth();
 
   // 使用自定义 Hooks 管理状态，传递 user 参数以监听用户变化
   const {
@@ -106,6 +106,7 @@ export function App() {
             onDeleteChat={deleteChat}
             user={user}
             onLogout={logout}
+            onUserUpdate={updateUser}
             historyImages={historyImages.slice(0, 3)}
             onViewImages={handleViewImages}
           />

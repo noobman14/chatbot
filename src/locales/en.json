@@ -22,7 +22,9 @@
     "removeImage": "Remove Image",
     "imageTooLarge": "Image size cannot exceed 10MB",
     "invalidImageType": "Please select a valid image file",
-    "imageProcessError": "Image processing failed, please try again"
+    "imageProcessError": "Image processing failed, please try again",
+    "polish": "Polish",
+    "polishing": "Polishing..."
   },
   "login": {
     "title": "Chatbot AI",
@@ -49,11 +51,32 @@
     "viewAll": "View All"
   },
   "user": {
-    "upgradePro": "Upgrade to Pro",
     "account": "Account",
-    "billing": "Billing",
     "notifications": "Notifications",
     "logout": "Log out"
+  },
+  "account": {
+    "title": "Account Settings",
+    "changeName": "Change Username",
+    "newName": "New Username",
+    "namePlaceholder": "Enter new username",
+    "nameRequired": "Username cannot be empty",
+    "nameUpdated": "Username updated",
+    "updateName": "Update Username",
+    "updateFailed": "Update failed",
+    "changePassword": "Change Password",
+    "oldPassword": "Current Password",
+    "oldPasswordPlaceholder": "Enter current password",
+    "newPassword": "New Password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPassword": "Confirm New Password",
+    "confirmPasswordPlaceholder": "Re-enter new password",
+    "allFieldsRequired": "Please fill in all fields",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordChanged": "Password changed",
+    "updatePassword": "Change Password",
+    "changeFailed": "Change failed"
   },
   "theme": {
     "toggle": "Toggle theme",

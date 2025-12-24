@@ -7,7 +7,7 @@ import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select
 import { api } from '@/utils/api';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '@/hooks/useNotification';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus, X, Sparkles } from 'lucide-react';
 
 export function ChatInput({ currentChatId, setChatMessages }: any) {
   const { t } = useTranslation();
@@ -24,6 +24,9 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
 
   // 通知功能
   const { sendNotification } = useNotification();
+
+  // 润色状态
+  const [polishing, setPolishing] = useState(false);
 
   // 当加载状态结束时，自动聚焦到输入框
   useEffect(() => {
@@ -175,6 +178,34 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
   // 点击图片上传按钮
   function handleImageButtonClick() {
     fileInputRef.current?.click();
+  }
+
+  // AI 润色 prompt
+  async function handlePolish() {
+    if (!currentChatId || !inputText.trim() || polishing || Loading) {
+      return;
+    }
+
+    setPolishing(true);
+    const originalText = inputText;
+    setInputText(''); // 清空输入框，准备接收润色结果
+
+    try {
+      let polishedText = '';
+
+      for await (const chunk of api.polishPrompt(currentChatId, originalText)) {
+        if (chunk.type === 'content') {
+          polishedText += chunk.text;
+          setInputText(polishedText); // 实时更新输入框
+        }
+      }
+    } catch (error) {
+      console.error('润色失败:', error);
+      // 润色失败时恢复原始内容
+      setInputText(originalText);
+    } finally {
+      setPolishing(false);
+    }
   }
 
   // 发送消息的核心逻辑
@@ -398,6 +429,20 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
           value={inputText}
           className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0"
         />
+        {/* AI 润色按钮 - 只在图片模式下显示 */}
+        {mode === 'picture' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePolish}
+            disabled={Loading || polishing || !inputText.trim()}
+            className="polish-btn shrink-0"
+            title={t('chat.polish')}
+          >
+            <Sparkles size={16} className="mr-1" />
+            {polishing ? t('chat.polishing') : t('chat.polish')}
+          </Button>
+        )}
         <NativeSelect onChange={handleSelectChange} className='shrink-0 w-max'>
           <NativeSelectOption value='disabled' className='shrink-0'>{t('chat.modeFast')}</NativeSelectOption>
           <NativeSelectOption value='enabled' className='shrink-0'>{t('chat.modeThink')}</NativeSelectOption>

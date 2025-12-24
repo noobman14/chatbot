@@ -78,11 +78,23 @@ export function useAuth() {
     }
   };
 
+  /**
+   * 更新用户信息
+   */
+  const updateUser = (updatedUser: { name: string; email: string; avatar: string }) => {
+    if (user) {
+      const newUser = { ...user, ...updatedUser };
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
+    }
+  };
+
   return {
     user,
     isLoading,
     register,
     login,
-    logout
+    logout,
+    updateUser
   };
 }

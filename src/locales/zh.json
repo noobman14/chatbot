@@ -22,7 +22,9 @@
     "removeImage": "移除图片",
     "imageTooLarge": "图片大小不能超过10MB",
     "invalidImageType": "请选择有效的图片文件",
-    "imageProcessError": "图片处理失败，请重试"
+    "imageProcessError": "图片处理失败，请重试",
+    "polish": "AI润色",
+    "polishing": "润色中..."
   },
   "login": {
     "title": "Chatbot AI",
@@ -49,11 +51,32 @@
     "viewAll": "查看全部"
   },
   "user": {
-    "upgradePro": "升级到 Pro",
     "account": "账户",
-    "billing": "账单",
     "notifications": "通知",
     "logout": "退出登录"
+  },
+  "account": {
+    "title": "账户设置",
+    "changeName": "修改用户名",
+    "newName": "新用户名",
+    "namePlaceholder": "请输入新用户名",
+    "nameRequired": "用户名不能为空",
+    "nameUpdated": "用户名已更新",
+    "updateName": "更新用户名",
+    "updateFailed": "更新失败",
+    "changePassword": "修改密码",
+    "oldPassword": "当前密码",
+    "oldPasswordPlaceholder": "请输入当前密码",
+    "newPassword": "新密码",
+    "newPasswordPlaceholder": "请输入新密码",
+    "confirmPassword": "确认新密码",
+    "confirmPasswordPlaceholder": "请再次输入新密码",
+    "allFieldsRequired": "请填写所有字段",
+    "passwordMismatch": "两次输入的密码不一致",
+    "passwordTooShort": "密码长度不能少于6位",
+    "passwordChanged": "密码已修改",
+    "updatePassword": "修改密码",
+    "changeFailed": "修改失败"
   },
   "theme": {
     "toggle": "切换主题",

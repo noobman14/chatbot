@@ -27,6 +27,7 @@ interface AppSidebarProps {
   onDeleteChat: (id: string, e: React.MouseEvent) => void; // 删除会话的回调
   user: { name: string; email: string; avatar: string }; // 用户信息
   onLogout: () => void; // 登出回调
+  onUserUpdate?: (user: { name: string; email: string; avatar: string }) => void; // 用户信息更新回调
   historyImages?: ImageItem[]; // 历史图片列表
   onViewImages?: () => void; // 查看所有图片的回调
 }
@@ -39,6 +40,7 @@ export function AppSidebar({
   onDeleteChat,
   user,
   onLogout,
+  onUserUpdate,
   historyImages = [],
   onViewImages
 }: AppSidebarProps) {
@@ -122,7 +124,7 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} onLogout={onLogout} />
+        <NavUser user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />
       </SidebarFooter>
 
     </Sidebar>
