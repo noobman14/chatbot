@@ -20,13 +20,18 @@ function getHeaders(): HeadersInit {
 
 /**
  * 统一处理响应
+ * @param response HTTP响应对象
+ * @param skipAuthRedirect 如果为 true，则不会在 401 时自动退出登录并刷新页面
  */
-async function handleResponse<T>(response: Response): Promise<T> {
-  // 401 表示 Token 无效或过期，清除本地数据并刷新页面
+async function handleResponse<T>(response: Response, skipAuthRedirect: boolean = false): Promise<T> {
+  // 401 表示 Token 无效或过期
   if (response.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.reload();
+    // 如果不跳过认证重定向，则清除本地数据并刷新页面
+    if (!skipAuthRedirect) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    }
     throw new Error('Unauthorized');
   }
 
@@ -53,6 +58,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(params)
     });
+    // 注册失败不应该触发自动退出
     return handleResponse<{
       user: {
         id: string;
@@ -62,7 +68,7 @@ export const api = {
         createdAt: number;
       };
       token: string;
-    }>(response);
+    }>(response, true);
   },
 
   /**
@@ -74,6 +80,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(params)
     });
+    // 登录失败不应该触发自动退出
     return handleResponse<{
       user: {
         id: string;
@@ -83,7 +90,7 @@ export const api = {
         createdAt: number;
       };
       token: string;
-    }>(response);
+    }>(response, true);
   },
 
   /**
@@ -392,7 +399,8 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(params)
     });
-    return handleResponse<void>(response);
+    // 密码错误不应该触发自动退出
+    return handleResponse<void>(response, true);
   },
 
   /**
