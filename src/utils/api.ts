@@ -178,6 +178,7 @@ export const api = {
             reasoning_content: string;
           };
           time: number;
+          imageUrl?: string;
         }>;
         createdAt: number;
         updatedAt: number;

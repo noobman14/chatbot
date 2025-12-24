@@ -111,10 +111,10 @@
   margin-left: 8px;
 }
 
-.image-preview {
-  max-width: 120px;
-  max-height: 80px;
-  border-radius: 8px;
+.image-preview-container .image-preview {
+  max-width: 200px;
+  max-height: auto;
+  border-radius: 6px;
   object-fit: cover;
   border: 1px solid var(--border);
 }
