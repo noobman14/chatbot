@@ -30,6 +30,7 @@ interface ChatMessageType {
 
 interface ChatMessagesProps {
   chatMessages: ChatMessageType[];
+  userAvatar?: string; // 用户头像 URL
 }
 
 
@@ -67,8 +68,9 @@ function ChatMessageWithHighlight({
   id,
   imageUrl,
   searchKeyword,
-  isMatch
-}: ChatMessageType & { searchKeyword: string; isMatch: boolean }) {
+  isMatch,
+  userAvatar
+}: ChatMessageType & { searchKeyword: string; isMatch: boolean; userAvatar?: string }) {
   const { t } = useTranslation();
 
   const markdownStyles = cn(
@@ -245,7 +247,7 @@ function ChatMessageWithHighlight({
           </div>
         </div>
         {sender === 'user' && (
-          <img src={UserProfileImage}
+          <img src={userAvatar || UserProfileImage}
             className="chat-message-profile"
           />
         )}
@@ -254,7 +256,7 @@ function ChatMessageWithHighlight({
   );
 }
 
-export function ChatMessages({ chatMessages }: ChatMessagesProps) {
+export function ChatMessages({ chatMessages, userAvatar }: ChatMessagesProps) {
   const { t } = useTranslation();
 
   // 搜索相关状态
@@ -429,6 +431,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
             imageUrl={(chatMessage as any).imageUrl}
             searchKeyword={searchKeyword}
             isMatch={isMessageMatch(chatMessage)}
+            userAvatar={userAvatar}
           />
         ))}
       </div>

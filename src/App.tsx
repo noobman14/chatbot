@@ -117,7 +117,7 @@ export function App() {
             {viewMode === 'chat' ? (
               <>
                 {/* 消息展示组件 */}
-                <ChatMessages chatMessages={currentMessages} />
+                <ChatMessages chatMessages={currentMessages} userAvatar={user.avatar} />
                 {/* 输入框组件 */}
                 <ChatInput
                   currentChatId={currentChatId}
