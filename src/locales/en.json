@@ -1,0 +1,55 @@
+{
+  "common": {
+    "loading": "Loading..."
+  },
+  "chat": {
+    "inputPlaceholder": "Send a message to Chatbot",
+    "send": "Send",
+    "modeFast": "Fast",
+    "modeThink": "Think",
+    "modePicture": "Picture",
+    "error": "Sorry, I encountered an error while processing your request.",
+    "searchPlaceholder": "Search messages...",
+    "searchTooltip": "Search messages (Ctrl+F)",
+    "prevMatch": "Previous (Shift+Enter)",
+    "nextMatch": "Next (Enter)",
+    "clearSearch": "Clear search",
+    "hideThinking": "Hide Thinking",
+    "showThinking": "Show Thinking"
+  },
+  "login": {
+    "title": "Chatbot AI",
+    "subtitle": "Your personal AI assistant",
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "password": "Password",
+    "name": "Name",
+    "namePlaceholder": "John Doe",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "loginDescription": "Enter your email and password to access your account.",
+    "registerDescription": "Enter your details below to create your new account.",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed"
+  },
+  "sidebar": {
+    "newChat": "New Message",
+    "recentChats": "Recent Message",
+    "deleteChat": "Delete chat"
+  },
+  "user": {
+    "upgradePro": "Upgrade to Pro",
+    "account": "Account",
+    "billing": "Billing",
+    "notifications": "Notifications",
+    "logout": "Log out"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  }
+}

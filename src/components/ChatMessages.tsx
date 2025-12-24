@@ -14,6 +14,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // 定义单条消息的类型结构
 interface ChatMessageType {
@@ -66,6 +67,7 @@ function ChatMessageWithHighlight({
   searchKeyword,
   isMatch
 }: ChatMessageType & { searchKeyword: string; isMatch: boolean }) {
+  const { t } = useTranslation();
 
   const markdownStyles = cn(
     "prose prose-sm max-w-none break-words whitespace-pre-wrap",
@@ -150,7 +152,7 @@ function ChatMessageWithHighlight({
             <div>
               <CollapsibleTrigger className="flex items-center justify-star gap-4 px-4 ml-15 bg-zinc-100 hover:bg-zinc-200 rounded-md pt-2 pb-2 dark:bg-zinc-800 dark:hover:bg-zinc-700">
                 <h4 className="text-sm font-semibold">
-                  {isOpen ? 'Hide Thinking' : 'Show Thinking'}
+                  {isOpen ? t('chat.hideThinking') : t('chat.showThinking')}
                 </h4>
                 <ChevronsUpDown />
               </CollapsibleTrigger>
@@ -188,6 +190,8 @@ function ChatMessageWithHighlight({
 }
 
 export function ChatMessages({ chatMessages }: ChatMessagesProps) {
+  const { t } = useTranslation();
+
   // 搜索相关状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -293,7 +297,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
         <button
           className="search-toggle-btn"
           onClick={toggleSearch}
-          title="搜索消息 (Ctrl+F)"
+          title={t('chat.searchTooltip')}
         >
           <Search size={18} />
         </button>
@@ -303,7 +307,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
             <input
               type="text"
               className="search-input"
-              placeholder="搜索消息..."
+              placeholder={t('chat.searchPlaceholder')}
               value={searchKeyword}
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
@@ -322,7 +326,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
                     className="search-nav-btn"
                     onClick={goToPrevMatch}
                     disabled={matchedMessages.length === 0}
-                    title="上一个 (Shift+Enter)"
+                    title={t('chat.prevMatch')}
                   >
                     <ChevronUp size={16} />
                   </button>
@@ -330,7 +334,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
                     className="search-nav-btn"
                     onClick={goToNextMatch}
                     disabled={matchedMessages.length === 0}
-                    title="下一个 (Enter)"
+                    title={t('chat.nextMatch')}
                   >
                     <ChevronDown size={16} />
                   </button>
@@ -338,7 +342,7 @@ export function ChatMessages({ chatMessages }: ChatMessagesProps) {
                 <button
                   className="search-clear-btn"
                   onClick={clearSearch}
-                  title="清除搜索"
+                  title={t('chat.clearSearch')}
                 >
                   <X size={16} />
                 </button>

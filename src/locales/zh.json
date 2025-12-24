@@ -1,0 +1,55 @@
+{
+  "common": {
+    "loading": "加载中..."
+  },
+  "chat": {
+    "inputPlaceholder": "给 Chatbot 发送消息",
+    "send": "发送",
+    "modeFast": "快速",
+    "modeThink": "思考",
+    "modePicture": "图片",
+    "error": "抱歉，处理您的请求时遇到了错误。",
+    "searchPlaceholder": "搜索消息...",
+    "searchTooltip": "搜索消息 (Ctrl+F)",
+    "prevMatch": "上一个 (Shift+Enter)",
+    "nextMatch": "下一个 (Enter)",
+    "clearSearch": "清除搜索",
+    "hideThinking": "隐藏思考过程",
+    "showThinking": "显示思考过程"
+  },
+  "login": {
+    "title": "Chatbot AI",
+    "subtitle": "您的个人 AI 助手",
+    "login": "登录",
+    "register": "注册",
+    "email": "邮箱",
+    "emailPlaceholder": "name@example.com",
+    "password": "密码",
+    "name": "姓名",
+    "namePlaceholder": "张三",
+    "signIn": "登录",
+    "createAccount": "创建账号",
+    "loginDescription": "输入您的邮箱和密码以访问您的账户。",
+    "registerDescription": "输入您的信息以创建新账户。",
+    "loginFailed": "登录失败",
+    "registerFailed": "注册失败"
+  },
+  "sidebar": {
+    "newChat": "新建对话",
+    "recentChats": "最近消息",
+    "deleteChat": "删除对话"
+  },
+  "user": {
+    "upgradePro": "升级到 Pro",
+    "account": "账户",
+    "billing": "账单",
+    "notifications": "通知",
+    "logout": "退出登录"
+  },
+  "theme": {
+    "toggle": "切换主题",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  }
+}

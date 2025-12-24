@@ -8,8 +8,11 @@ import { useChatSessions } from './hooks/useChatSessions';
 import { useAuth } from './hooks/useAuth';
 import { ThemeProvider } from './components/theme-provider';
 import { Header } from './components/Header';
+import { useTranslation } from 'react-i18next';
 
 export function App() {
+  const { t } = useTranslation();
+
   // 先获取用户信息
   const { user, isLoading: authLoading, register, login, logout } = useAuth();
 
@@ -28,7 +31,7 @@ export function App() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t('common.loading')}</div>
       </div>
     );
   }

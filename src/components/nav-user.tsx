@@ -30,6 +30,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useTranslation } from 'react-i18next';
 
 // NavUser 组件：显示在侧边栏底部的用户信息区域
 // 包含用户头像、姓名、邮箱，以及一个下拉菜单（用于登出、查看账户等）
@@ -46,6 +47,7 @@ export function NavUser({
 }) {
   // 获取侧边栏状态，用于判断是否为移动端布局
   const { isMobile } = useSidebar()
+  const { t } = useTranslation();
 
   return (
     <SidebarMenu>
@@ -95,7 +97,7 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Upgrade to Pro
+                {t('user.upgradePro')}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -104,15 +106,15 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <BadgeCheck className="mr-2 h-4 w-4" />
-                Account
+                {t('user.account')}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Billing
+                {t('user.billing')}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell className="mr-2 h-4 w-4" />
-                Notifications
+                {t('user.notifications')}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -120,7 +122,7 @@ export function NavUser({
             {/* 登出按钮 */}
             <DropdownMenuItem onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />
-              Log out
+              {t('user.logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect, NativeSelectOption, } from "@/components/ui/native-select"
 import { api } from '@/utils/api';
+import { useTranslation } from 'react-i18next';
 
 export function ChatInput({ currentChatId, setChatMessages }: any) {
+  const { t } = useTranslation();
   const [inputText, setInputText] = useState('');
   const [Loading, setLoading] = useState(false); // 加载状态，用于禁用输入框和按钮
   const [mode, setMode] = useState('disabled');
@@ -58,7 +60,7 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
 
     const aiMsgPlaceholder = {
       message: {
-        content: 'Loading...', // 初始显示 Loading
+        content: t('common.loading'), // 初始显示 Loading
         reasoning_content: ''
       },
       sender: 'robot',
@@ -84,10 +86,10 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
           content: text,
           mode: mode
         });
-        
+
         currentAiContent = result.aiMessage.message.content;
         currentReasoning = result.aiMessage.message.reasoning_content || '';
-        
+
         // 更新 AI 消息内容
         setChatMessages((prev: any[]) => {
           const newMessages = [...prev];
@@ -171,7 +173,7 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
             newMessages[aiMsgIndex] = {
               ...newMessages[aiMsgIndex],
               message: {
-                content: 'Sorry, I encountered an error while processing your request.',
+                content: t('chat.error'),
                 reasoning_content: ''
               }
             };
@@ -188,7 +190,7 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
       <div className="chat-input-container">
         <Textarea
           ref={inputRef}
-          placeholder={Loading ? "Loading..." : "Send a message to Chatbot"}
+          placeholder={Loading ? t('common.loading') : t('chat.inputPlaceholder')}
           disabled={Loading}
           onChange={saveInputText}
           onKeyDown={(event) => {
@@ -206,15 +208,15 @@ export function ChatInput({ currentChatId, setChatMessages }: any) {
           className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0"
         />
         <NativeSelect onChange={handleSelectChange} className='shrink-0 w-max'>
-          <NativeSelectOption value='disabled' className='shrink-0'>Fast</NativeSelectOption>
-          <NativeSelectOption value='enabled' className='shrink-0'>Think</NativeSelectOption>
-          <NativeSelectOption value='picture' className='shrink-0'>Picture</NativeSelectOption>
+          <NativeSelectOption value='disabled' className='shrink-0'>{t('chat.modeFast')}</NativeSelectOption>
+          <NativeSelectOption value='enabled' className='shrink-0'>{t('chat.modeThink')}</NativeSelectOption>
+          <NativeSelectOption value='picture' className='shrink-0'>{t('chat.modePicture')}</NativeSelectOption>
         </NativeSelect>
         <Button
           disabled={Loading}
           onClick={sendMessage}
           className="send-button ml-3"
-        >Send</Button>
+        >{t('chat.send')}</Button>
       </div ></div>
 
   );

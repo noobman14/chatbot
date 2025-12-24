@@ -15,16 +15,7 @@ import {
   SidebarTrigger,
   SidebarMenuAction,
 } from "@/components/ui/sidebar"
-
-// 菜单项配置
-const items = [
-  {
-    title: "New Message",
-    url: "#",
-    icon: MessageSquarePlus,
-    action: "new_chat"
-  },
-]
+import { useTranslation } from 'react-i18next';
 
 // 定义组件属性接口
 interface AppSidebarProps {
@@ -46,6 +37,18 @@ export function AppSidebar({
   user,
   onLogout
 }: AppSidebarProps) {
+  const { t } = useTranslation();
+
+  // 菜单项配置 - 移动到组件内部以使用 t 函数
+  const items = [
+    {
+      title: t('sidebar.newChat'),
+      url: "#",
+      icon: MessageSquarePlus,
+      action: "new_chat"
+    },
+  ];
+
   return (
     <Sidebar collapsible="icon" >
       <SidebarHeader className="flex flex-row justify-end">
@@ -78,7 +81,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Recent Message</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('sidebar.recentChats')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {/* 渲染历史会话列表 */}
@@ -96,7 +99,7 @@ export function AppSidebar({
                   <SidebarMenuAction
                     showOnHover
                     onClick={(e) => onDeleteChat(session.id, e)}
-                    title="Delete chat"
+                    title={t('sidebar.deleteChat')}
                   >
                     <Trash2 />
                   </SidebarMenuAction>
