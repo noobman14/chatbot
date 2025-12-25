@@ -41,7 +41,16 @@
     "loginDescription": "输入您的邮箱和密码以访问您的账户。",
     "registerDescription": "输入您的信息以创建新账户。",
     "loginFailed": "登录失败",
-    "registerFailed": "注册失败"
+    "registerFailed": "注册失败",
+    "verificationCode": "验证码",
+    "verificationCodePlaceholder": "请输入6位验证码",
+    "verificationCodeSent": "验证码已发送到您的邮箱",
+    "resendCode": "重新发送",
+    "resendCodeIn": "{{seconds}}秒后重发",
+    "verify": "验证",
+    "verifyFailed": "验证失败",
+    "codeExpired": "验证码已过期，请重新发送",
+    "backToLogin": "返回登录"
   },
   "sidebar": {
     "newChat": "新建对话",

@@ -9,10 +9,18 @@ export interface User {
 }
 
 export function useAuth() {
-  // 用户状态管理
+  // 用户状态管理 - 安全解析localStorage
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
+        return JSON.parse(savedUser);
+      }
+    } catch (e) {
+      console.warn('Failed to parse user from localStorage:', e);
+      localStorage.removeItem('user');
+    }
+    return null;
   });
 
   const [isLoading, setIsLoading] = useState(true);

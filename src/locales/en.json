@@ -41,7 +41,16 @@
     "loginDescription": "Enter your email and password to access your account.",
     "registerDescription": "Enter your details below to create your new account.",
     "loginFailed": "Login failed",
-    "registerFailed": "Registration failed"
+    "registerFailed": "Registration failed",
+    "verificationCode": "Verification Code",
+    "verificationCodePlaceholder": "Enter 6-digit code",
+    "verificationCodeSent": "Verification code has been sent to your email",
+    "resendCode": "Resend Code",
+    "resendCodeIn": "Resend in {{seconds}}s",
+    "verify": "Verify",
+    "verifyFailed": "Verification failed",
+    "codeExpired": "Code expired, please resend",
+    "backToLogin": "Back to Login"
   },
   "sidebar": {
     "newChat": "New Message",
