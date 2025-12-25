@@ -17,7 +17,7 @@ interface LoginPageProps {
   onLoginSuccess?: (user: any, token: string) => void;
 }
 
-export function LoginPage({ onLogin, onRegister, onLoginSuccess }: LoginPageProps) {
+export function LoginPage({ onRegister, onLoginSuccess }: LoginPageProps) {
   const { t } = useTranslation();
 
   // 全局状态：控制加载中动画和错误信息显示

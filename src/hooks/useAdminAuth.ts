@@ -54,11 +54,17 @@ export function useAdminAuth() {
     /**
      * 管理员登出
      */
-    const logout = () => {
-        setAdmin(null);
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('admin');
-        localStorage.removeItem('token');
+    const logout = async () => {
+        try {
+            await api.logout();
+        } catch (error) {
+            console.error('Admin logout error:', error);
+        } finally {
+            setAdmin(null);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('admin');
+            localStorage.removeItem('token');
+        }
     };
 
     return {
