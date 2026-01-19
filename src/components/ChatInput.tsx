@@ -333,7 +333,7 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           image_mime_type: imageMimeType || undefined
         })) {
           if (firstChunk) {
-            // 收到第一个 chunk 时，清除 "Loading..."
+            // 收到第一个 chunk 时，清除 "Loading...消息"
             currentAiContent = "";
             firstChunk = false;
           }
