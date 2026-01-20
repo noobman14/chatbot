@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, User, MessageSquare, Zap, Hash, Loader2, ChevronDown, ChevronRight, Bot, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -40,6 +40,127 @@ interface UserDetail {
     sessions: UserSession[];
 }
 
+// 单条消息组件 - 使用 memo 避免不必要的重渲染
+const MessageItem = memo(function MessageItem({
+    msg,
+    onDelete,
+}: {
+    msg: SessionMessage;
+    onDelete: (id: string) => void;
+}) {
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!confirm('确定要删除这条消息吗？')) return;
+        setIsDeleting(true);
+        await onDelete(msg.id);
+        setIsDeleting(false);
+    };
+
+    // 截断过长的内容
+    const displayContent = useMemo(() => {
+        return msg.content.length > 500
+            ? msg.content.substring(0, 500) + '...'
+            : msg.content;
+    }, [msg.content]);
+
+    return (
+        <div className="flex gap-3">
+            <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${msg.sender === 'user' ? 'bg-blue-500/20' : 'bg-amber-500/20'
+                }`}>
+                {msg.sender === 'user' ? (
+                    <User className="h-4 w-4 text-blue-400" />
+                ) : (
+                    <Bot className="h-4 w-4 text-amber-400" />
+                )}
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-400">
+                        {msg.sender === 'user' ? '用户' : 'AI'}
+                    </span>
+                    <span className="text-xs text-zinc-600">
+                        {new Date(msg.time).toLocaleTimeString('zh-CN')}
+                    </span>
+                </div>
+                <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words mt-1">
+                    {displayContent}
+                </p>
+            </div>
+            <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex-shrink-0 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                title="删除消息"
+            >
+                {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                    <Trash2 className="h-4 w-4" />
+                )}
+            </button>
+        </div>
+    );
+});
+
+// 会话列表项组件 - 使用 memo
+const SessionItem = memo(function SessionItem({
+    session,
+    isExpanded,
+    onToggle,
+    onDeleteMessage,
+}: {
+    session: UserSession;
+    isExpanded: boolean;
+    onToggle: () => void;
+    onDeleteMessage: (id: string) => void;
+}) {
+    const formatDateTime = (timestamp: number) => {
+        return new Date(timestamp).toLocaleString('zh-CN');
+    };
+
+    // 只在展开时渲染消息列表
+    const messagesElement = useMemo(() => {
+        if (!isExpanded) return null;
+
+        return (
+            <div className="border-t border-zinc-600 p-4 space-y-3 max-h-80 overflow-y-auto">
+                {session.messages.map(msg => (
+                    <MessageItem
+                        key={msg.id}
+                        msg={msg}
+                        onDelete={onDeleteMessage}
+                    />
+                ))}
+            </div>
+        );
+    }, [isExpanded, session.messages, onDeleteMessage]);
+
+    return (
+        <div className="bg-zinc-700/50 rounded-xl overflow-hidden">
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-4 hover:bg-zinc-700 transition-colors text-left"
+            >
+                <div className="flex items-center gap-3">
+                    {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-zinc-400" />
+                    ) : (
+                        <ChevronRight className="h-4 w-4 text-zinc-400" />
+                    )}
+                    <div>
+                        <p className="font-medium text-white">{session.title}</p>
+                        <p className="text-xs text-zinc-500">
+                            {formatDateTime(session.updatedAt)} · {session.messageCount} 条消息
+                        </p>
+                    </div>
+                </div>
+            </button>
+            {messagesElement}
+        </div>
+    );
+});
+
 /**
  * 用户详情弹窗
  * 
@@ -72,10 +193,6 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
         return new Date(timestamp).toLocaleDateString('zh-CN');
     };
 
-    const formatDateTime = (timestamp: number) => {
-        return new Date(timestamp).toLocaleString('zh-CN');
-    };
-
     const formatNumber = (num: number) => {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
@@ -86,7 +203,8 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
         return num.toString();
     };
 
-    const toggleSession = (sessionId: string) => {
+    // 使用 useCallback 避免重复创建函数
+    const toggleSession = useCallback((sessionId: string) => {
         setExpandedSessions(prev => {
             const newSet = new Set(prev);
             if (newSet.has(sessionId)) {
@@ -96,24 +214,61 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
             }
             return newSet;
         });
-    };
+    }, []);
 
-    // 删除消息
-    const handleDeleteMessage = async (messageId: string) => {
-        if (!confirm('确定要删除这条消息吗？')) return;
+    // 删除消息 - 只更新本地状态，不重新请求全部数据
+    const handleDeleteMessage = useCallback(async (messageId: string) => {
         try {
             await api.adminDeleteMessage(messageId);
-            // 刷新用户数据
-            const data = await api.getUserDetail(userId);
-            setUser(data);
+            // 本地更新：从 sessions 中移除该消息
+            setUser(prevUser => {
+                if (!prevUser) return prevUser;
+                return {
+                    ...prevUser,
+                    messageCount: prevUser.messageCount - 1,
+                    sessions: prevUser.sessions.map(session => ({
+                        ...session,
+                        messageCount: session.messages.some(m => m.id === messageId)
+                            ? session.messageCount - 1
+                            : session.messageCount,
+                        messages: session.messages.filter(m => m.id !== messageId)
+                    }))
+                };
+            });
         } catch (err: any) {
             alert(err.message || '删除失败');
         }
-    };
+    }, []);
+
+    // 使用 useMemo 缓存会话列表，避免不必要的重渲染
+    const sessionsList = useMemo(() => {
+        if (!user?.sessions) return null;
+
+        return user.sessions.map(session => (
+            <SessionItem
+                key={session.id}
+                session={session}
+                isExpanded={expandedSessions.has(session.id)}
+                onToggle={() => toggleSession(session.id)}
+                onDeleteMessage={handleDeleteMessage}
+            />
+        ));
+    }, [user?.sessions, expandedSessions, toggleSession, handleDeleteMessage]);
+
+    // 阻止点击弹窗内部时关闭
+    const handleContentClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+    }, []);
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-zinc-800 border border-zinc-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+        <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+            <div
+                className="bg-zinc-800 border border-zinc-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl"
+                onClick={handleContentClick}
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-zinc-700">
                     <h2 className="text-xl font-semibold text-white">用户详情</h2>
@@ -221,7 +376,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                                     <div className="bg-zinc-700/50 rounded-xl p-4">
                                         <h4 className="text-sm font-medium text-zinc-300 mb-4">最近 7 天活动</h4>
                                         <div className="h-48">
-                                            <ResponsiveContainer width="100%" height="100%">
+                                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                                 <BarChart data={user.recentActivity}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                                                     <XAxis
@@ -251,67 +406,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                                     {user.sessions?.length === 0 ? (
                                         <div className="text-center py-10 text-zinc-500">暂无会话记录</div>
                                     ) : (
-                                        user.sessions?.map(session => (
-                                            <div key={session.id} className="bg-zinc-700/50 rounded-xl overflow-hidden">
-                                                <button
-                                                    onClick={() => toggleSession(session.id)}
-                                                    className="w-full flex items-center justify-between p-4 hover:bg-zinc-700 transition-colors text-left"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        {expandedSessions.has(session.id) ? (
-                                                            <ChevronDown className="h-4 w-4 text-zinc-400" />
-                                                        ) : (
-                                                            <ChevronRight className="h-4 w-4 text-zinc-400" />
-                                                        )}
-                                                        <div>
-                                                            <p className="font-medium text-white">{session.title}</p>
-                                                            <p className="text-xs text-zinc-500">
-                                                                {formatDateTime(session.updatedAt)} · {session.messageCount} 条消息
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </button>
-
-                                                {expandedSessions.has(session.id) && (
-                                                    <div className="border-t border-zinc-600 p-4 space-y-3 max-h-80 overflow-y-auto">
-                                                        {session.messages.map(msg => (
-                                                            <div key={msg.id} className={`flex gap-3 ${msg.sender === 'robot' ? '' : ''}`}>
-                                                                <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${msg.sender === 'user' ? 'bg-blue-500/20' : 'bg-amber-500/20'
-                                                                    }`}>
-                                                                    {msg.sender === 'user' ? (
-                                                                        <User className="h-4 w-4 text-blue-400" />
-                                                                    ) : (
-                                                                        <Bot className="h-4 w-4 text-amber-400" />
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-xs font-medium text-zinc-400">
-                                                                            {msg.sender === 'user' ? '用户' : 'AI'}
-                                                                        </span>
-                                                                        <span className="text-xs text-zinc-600">
-                                                                            {new Date(msg.time).toLocaleTimeString('zh-CN')}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words mt-1">
-                                                                        {msg.content.length > 500
-                                                                            ? msg.content.substring(0, 500) + '...'
-                                                                            : msg.content}
-                                                                    </p>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => handleDeleteMessage(msg.id)}
-                                                                    className="flex-shrink-0 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                                                                    title="删除消息"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
+                                        sessionsList
                                     )}
                                 </div>
                             )}
@@ -322,4 +417,3 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
         </div>
     );
 }
-

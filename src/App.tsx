@@ -4,8 +4,7 @@ import ChatMessages from './components/ChatMessages';
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { LoginPage } from './components/LoginPage';
-import { AdminLoginPage } from './components/AdminLoginPage';
-import { AdminDashboard } from './components/AdminDashboard';
+import { AdminLoginPage, AdminDashboard } from './components/admin';
 import { useChatSessions } from './hooks/useChatSessions';
 import { useAuth } from './hooks/useAuth';
 import { useAdminAuth } from './hooks/useAdminAuth';
