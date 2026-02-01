@@ -11,7 +11,7 @@ import { useAdminAuth } from './hooks/useAdminAuth';
 import { ThemeProvider } from './components/theme-provider';
 import { Header } from './components/Header';
 import { useState, useMemo, useEffect } from 'react';
-import { hideMessage, hideMessages, getHiddenMessagesForSession } from './utils/hiddenMessages';
+import { getHiddenMessagesForSession } from './utils/hiddenMessages';
 import { ImageHistory, type ImageItem } from './components/ImageHistory';
 import { api } from './utils/api';
 
@@ -58,16 +58,13 @@ function UserApp() {
   // 编辑状态：存储正在编辑的消息 ID 和内容
   const [editingMessage, setEditingMessage] = useState<{ id: string | number; content: string } | null>(null);
 
-  // 用于触发重新渲染的状态
-  const [hiddenUpdateTrigger, setHiddenUpdateTrigger] = useState(0);
-
   // 过滤掉隐藏的消息
   const visibleMessages = useMemo(() => {
     if (!currentChatId) return currentMessages;
     const hiddenIds = getHiddenMessagesForSession(currentChatId);
     return currentMessages.filter(msg => !hiddenIds.includes(msg.id.toString()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMessages, currentChatId, hiddenUpdateTrigger]);
+  }, [currentMessages, currentChatId]);
 
   // 历史图片状态
   const [historyImages, setHistoryImages] = useState<ImageItem[]>([]);
@@ -139,23 +136,9 @@ function UserApp() {
                 <ChatMessages
                   chatMessages={visibleMessages}
                   userAvatar={user.avatar}
-                  onStartEdit={(id, content) => {
+                  onStartEdit={(id: string | number, content: string) => {
                     // 点击编辑按钮时，将消息内容传递给 ChatInput
                     setEditingMessage({ id, content });
-                  }}
-                  onDeleteMessage={(id) => {
-                    if (!currentChatId) return;
-                    // 前端隐藏消息，不调用后端 API
-                    hideMessage(currentChatId, id.toString());
-                    // 触发重新渲染
-                    setHiddenUpdateTrigger(prev => prev + 1);
-                  }}
-                  onBatchDelete={(ids) => {
-                    if (!currentChatId) return;
-                    // 批量隐藏消息
-                    hideMessages(currentChatId, ids.map(id => id.toString()));
-                    // 触发重新渲染
-                    setHiddenUpdateTrigger(prev => prev + 1);
                   }}
                 />
                 {/* 输入框组件 */}

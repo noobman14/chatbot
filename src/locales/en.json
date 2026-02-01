@@ -2,18 +2,20 @@
   "common": {
     "loading": "Loading..."
   },
+  "mode": {
+    "fast": "Fast",
+    "think": "Think",
+    "picture": "Picture"
+  },
   "chat": {
     "inputPlaceholder": "Send a message to Chatbot",
+    "edtingMessage": "Editing Message...",
     "send": "Send",
+    "resend": "Resend",
     "modeFast": "Fast",
     "modeThink": "Think",
     "modePicture": "Picture",
     "error": "Sorry, I encountered an error while processing your request.",
-    "searchPlaceholder": "Search messages...",
-    "searchTooltip": "Search messages (Ctrl+F)",
-    "prevMatch": "Previous (Shift+Enter)",
-    "nextMatch": "Next (Enter)",
-    "clearSearch": "Clear search",
     "hideThinking": "Hide Thinking",
     "showThinking": "Show Thinking",
     "copy": "Copy",

@@ -1,651 +1,189 @@
-# Chatbot 后端 API 接口文档
+# 📚 聊天机器人后端 API 文档
 
-## 概述
-
-本文档为 Chatbot AI 聊天应用的后端接口文档，定义了前端与后端交互所需的全部 RESTful API 接口。
-
-**基础信息：**
-- 基础URL：`http://localhost:8080/api/v1`
-- 数据格式：JSON
-- 字符编码：UTF-8
-- 认证方式：Bearer Token (JWT)
+> **Base URL**: `http://localhost:8080/api/v1`  
+> **认证方式**: Bearer Token (JWT)
 
 ---
 
-## 目录
+## 📋 目录
 
-1. [用户认证模块](#1-用户认证模块)
-2. [聊天会话管理模块](#2-聊天会话管理模块)
-3. [AI对话模块](#3-ai对话模块)
-4. [用户信息管理模块](#4-用户信息管理模块)
-5. [通用数据结构](#5-通用数据结构)
-6. [错误码说明](#6-错误码说明)
+- [统一响应格式](#统一响应格式)
+- [认证接口 (Auth)](#认证接口-auth)
+- [用户接口 (User)](#用户接口-user)
+- [聊天会话接口 (Chat Sessions)](#聊天会话接口-chat-sessions)
+- [消息接口 (Messages)](#消息接口-messages)
+- [图片接口 (Images)](#图片接口-images)
+- [AI 工具接口 (AI Tools)](#ai-工具接口-ai-tools)
+- [管理员接口 (Admin)](#管理员接口-admin)
+- [统计接口 (Statistics)](#统计接口-statistics)
 
 ---
 
-## 1. 用户认证模块
+## 统一响应格式
 
-### 1.1 用户注册
-
-**接口说明：** 创建新用户账户
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/auth/register`
-
-**是否需要认证：** 否
-
-**请求参数（Body）：**
+所有接口统一返回以下 JSON 格式：
 
 ```json
 {
-  "name": "string",      // 用户姓名，必填，长度 1-50
-  "email": "string",     // 邮箱地址，必填，需符合邮箱格式
-  "password": "string"   // 密码，必填，最小长度 6
+  "code": 200,
+  "message": "成功",
+  "data": { ... }
 }
 ```
 
-**成功响应：**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `code` | Integer | 业务状态码（200=成功，其他为错误） |
+| `message` | String | 响应消息 |
+| `data` | Object | 响应数据（可为 null） |
 
+---
+
+## 认证接口 (Auth)
+
+### 1. 用户注册
+`POST /auth/register`
+
+**请求体：**
+```json
+{
+  "name": "用户名",
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | String | ✅ | 用户姓名（1-50 字符） |
+| `email` | String | ✅ | 邮箱地址 |
+| `password` | String | ✅ | 密码（至少 6 位） |
+
+**响应示例：**
 ```json
 {
   "code": 200,
   "message": "注册成功",
   "data": {
-    "user": {
-      "id": "string",           // 用户唯一标识
-      "name": "string",         // 用户姓名
-      "email": "string",        // 邮箱地址
-      "avatar": "string",       // 头像URL
-      "createdAt": "number"     // 创建时间戳（毫秒）
-    },
-    "token": "string"          // JWT Token
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "user": { ... }
   }
-}
-```
-
-**错误响应：**
-
-```json
-{
-  "code": 400,
-  "message": "邮箱已被注册"
 }
 ```
 
 ---
 
-### 1.2 用户登录
+### 2. 用户登录
+`POST /auth/login`
 
-**接口说明：** 用户登录获取访问令牌
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/auth/login`
-
-**是否需要认证：** 否
-
-**请求参数（Body）：**
-
+**请求体：**
 ```json
 {
-  "email": "string",     // 邮箱地址，必填
-  "password": "string"   // 密码，必填
+  "email": "user@example.com",
+  "password": "password123"
 }
 ```
 
-**成功响应：**
-
+**响应示例（未启用 2FA）：**
 ```json
 {
   "code": 200,
   "message": "登录成功",
   "data": {
-    "user": {
-      "id": "string",
-      "name": "string",
-      "email": "string",
-      "avatar": "string",
-      "createdAt": "number"
-    },
-    "token": "string"
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "user": { ... }
   }
 }
 ```
 
-**错误响应：**
-
-```json
-{
-  "code": 401,
-  "message": "邮箱或密码错误"
-}
-```
-
----
-
-### 1.3 用户登出
-
-**接口说明：** 用户登出（可选实现，用于服务端token失效）
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/auth/logout`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**成功响应：**
-
+**响应示例（启用 2FA）：**
 ```json
 {
   "code": 200,
-  "message": "登出成功"
+  "message": "请输入验证码完成登录",
+  "data": {
+    "requires_2fa": true,
+    "email": "user@example.com"
+  }
 }
 ```
 
 ---
 
-### 1.4 验证 Token
+### 3. 验证二次认证码
+`POST /auth/verify-2fa`
 
-**接口说明：** 验证当前 Token 是否有效
+**请求体：**
+```json
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+```
 
-**请求方式：** `GET`
+**响应：** 返回 token 和用户信息
 
-**请求路径：** `/api/v1/auth/verify`
+---
 
-**是否需要认证：** 是
+### 4. 重新发送验证码
+`POST /auth/resend-code`
+
+**请求体：**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+---
+
+### 5. 用户登出
+`POST /auth/logout`
 
 **请求头：**
-
 ```
 Authorization: Bearer <token>
 ```
 
-**成功响应：**
+**响应：** 登出成功
 
+---
+
+### 6. 验证 Token
+`GET /auth/verify` 🔐
+
+**响应示例：**
 ```json
 {
   "code": 200,
   "message": "Token 有效",
   "data": {
-    "user": {
-      "id": "string",
-      "name": "string",
-      "email": "string",
-      "avatar": "string",
-      "createdAt": "number"
-    }
+    "user": { ... }
   }
 }
 ```
 
 ---
 
-## 2. 聊天会话管理模块
+## 用户接口 (User)
 
-### 2.1 获取所有聊天会话
+> 🔐 所有接口需要 Bearer Token
 
-**接口说明：** 获取当前用户的所有聊天会话列表
+### 1. 获取用户信息
+`GET /user/profile`
 
-**请求方式：** `GET`
-
-**请求路径：** `/api/v1/chat/sessions`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**查询参数（可选）：**
-
-```
-page: number      // 页码，默认 1
-pageSize: number  // 每页数量，默认 20
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "获取成功",
-  "data": {
-    "sessions": [
-      {
-        "id": "string",           // 会话唯一标识
-        "title": "string",        // 会话标题
-        "createdAt": "number",    // 创建时间戳
-        "updatedAt": "number",    // 最后更新时间戳
-        "messageCount": "number"  // 消息数量
-      }
-    ],
-    "total": "number",           // 总会话数
-    "page": "number",            // 当前页码
-    "pageSize": "number"         // 每页数量
-  }
-}
-```
-
----
-
-### 2.2 创建新聊天会话
-
-**接口说明：** 创建一个新的聊天会话
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/chat/sessions`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**请求参数（Body）：**
-
-```json
-{
-  "title": "string"  // 会话标题，可选，默认 "New Chat"
-}
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "创建成功",
-  "data": {
-    "session": {
-      "id": "string",
-      "title": "string",
-      "messages": [],
-      "createdAt": "number",
-      "updatedAt": "number"
-    }
-  }
-}
-```
-
----
-
-### 2.3 获取指定会话详情
-
-**接口说明：** 获取指定会话的详细信息及消息列表
-
-**请求方式：** `GET`
-
-**请求路径：** `/api/v1/chat/sessions/:sessionId`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**路径参数：**
-
-```
-sessionId: string  // 会话ID
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "获取成功",
-  "data": {
-    "session": {
-      "id": "string",
-      "title": "string",
-      "messages": [
-        {
-          "id": "string",              // 消息唯一标识
-          "sender": "string",          // 发送者类型："user" | "robot"
-          "message": {
-            "content": "string",              // 消息内容
-            "reasoning_content": "string"     // AI 推理过程（仅机器人消息）
-          },
-          "time": "number"             // 消息时间戳
-        }
-      ],
-      "createdAt": "number",
-      "updatedAt": "number"
-    }
-  }
-}
-```
-
----
-
-### 2.4 更新会话标题
-
-**接口说明：** 更新指定会话的标题
-
-**请求方式：** `PATCH`
-
-**请求路径：** `/api/v1/chat/sessions/:sessionId`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**路径参数：**
-
-```
-sessionId: string  // 会话ID
-```
-
-**请求参数（Body）：**
-
-```json
-{
-  "title": "string"  // 新标题，必填
-}
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "更新成功",
-  "data": {
-    "session": {
-      "id": "string",
-      "title": "string",
-      "updatedAt": "number"
-    }
-  }
-}
-```
-
----
-
-### 2.5 删除会话
-
-**接口说明：** 删除指定的聊天会话
-
-**请求方式：** `DELETE`
-
-**请求路径：** `/api/v1/chat/sessions/:sessionId`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**路径参数：**
-
-```
-sessionId: string  // 会话ID
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "删除成功"
-}
-```
-
-**错误响应：**
-
-```json
-{
-  "code": 403,
-  "message": "无法删除最后一个空会话"
-}
-```
-
----
-
-## 3. AI对话模块
-
-### 3.1 发送消息并获取AI回复
-
-**接口说明：** 向指定会话发送消息并获取AI的回复
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/chat/sessions/:sessionId/messages`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**路径参数：**
-
-```
-sessionId: string  // 会话ID
-```
-
-**请求参数（Body）：**
-
-```json
-{
-  "content": "string",     // 用户消息内容，必填
-  "mode": "string"         // AI 模式："disabled"（快速）| "enabled"（思考模式），必填
-}
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "发送成功",
-  "data": {
-    "userMessage": {
-      "id": "string",
-      "sender": "user",
-      "message": {
-        "content": "string",
-        "reasoning_content": ""
-      },
-      "time": "number"
-    },
-    "aiMessage": {
-      "id": "string",
-      "sender": "robot",
-      "message": {
-        "content": "string",                // AI 回复内容
-        "reasoning_content": "string"       // AI 推理过程（仅在 mode="enabled" 时有值）
-      },
-      "time": "number"
-    }
-  }
-}
-```
-
-**错误响应：**
-
-```json
-{
-  "code": 500,
-  "message": "AI 服务暂时不可用"
-}
-```
-
-```json
-{
-  "code": 408,
-  "message": "请求超时，请稍后重试"
-}
-```
-
----
-
-### 3.2 获取指定会话的所有消息
-
-**接口说明：** 获取指定会话的历史消息列表（分页）
-
-**请求方式：** `GET`
-
-**请求路径：** `/api/v1/chat/sessions/:sessionId/messages`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**路径参数：**
-
-```
-sessionId: string  // 会话ID
-```
-
-**查询参数（可选）：**
-
-```
-page: number        // 页码，默认 1
-pageSize: number    // 每页消息数，默认 50
-```
-
-**成功响应：**
-
-```json
-{
-  "code": 200,
-  "message": "获取成功",
-  "data": {
-    "messages": [
-      {
-        "id": "string",
-        "sender": "string",
-        "message": {
-          "content": "string",
-          "reasoning_content": "string"
-        },
-        "time": "number"
-      }
-    ],
-    "total": "number",
-    "page": "number",
-    "pageSize": "number"
-  }
-}
-```
-
-
----
-
-### 3.3 流式发送消息并获取AI回复
-
-**接口说明：** 向指定会话发送消息，并以流式方式获取AI的回复（支持打字机效果）
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/chat/sessions/:sessionId/messages/stream`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-Accept: text/event-stream
-```
-
-**路径参数：**
-
-```
-sessionId: string  // 会话ID
-```
-
-**请求参数（Body）：**
-
-```json
-{
-  "content": "string",     // 用户消息内容，必填
-  "mode": "string"         // AI 模式："disabled"（快速）| "enabled"（思考模式），必填
-}
-```
-
-**成功响应（Stream）：**
-
-响应数据为 SSE (Server-Sent Events) 格式，每条数据为一个 JSON 字符串。
-
-**数据块示例：**
-
-1. 思考过程（仅 enabled 模式）：
-```json
-{"type": "thinking", "text": "AI"}
-{"type": "thinking", "text": "正在"}
-{"type": "thinking", "text": "思考..."}
-```
-
-2. 内容输出：
-```json
-{"type": "content", "text": "你好"}
-{"type": "content", "text": "，"}
-{"type": "content", "text": "世界"}
-```
-
----
-
-
-## 4. 用户信息管理模块
-
-### 4.1 获取用户信息
-
-**接口说明：** 获取当前登录用户的详细信息
-
-**请求方式：** `GET`
-
-**请求路径：** `/api/v1/user/profile`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**成功响应：**
-
+**响应示例：**
 ```json
 {
   "code": 200,
   "message": "获取成功",
   "data": {
     "user": {
-      "id": "string",
-      "name": "string",
-      "email": "string",
-      "avatar": "string",
-      "createdAt": "number"
+      "id": "uuid",
+      "name": "用户名",
+      "email": "user@example.com",
+      "avatar": "https://...",
+      "createdAt": "2024-01-01T00:00:00"
     }
   }
 }
@@ -653,451 +191,552 @@ Authorization: Bearer <token>
 
 ---
 
-### 4.2 更新用户信息
+### 2. 更新用户信息
+`PATCH /user/profile`
 
-**接口说明：** 更新用户资料（姓名、头像）
-
-**请求方式：** `PATCH`
-
-**请求路径：** `/api/v1/user/profile`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**请求参数（Body）：**
-
+**请求体：**
 ```json
 {
-  "name": "string",    // 用户姓名，可选
-  "avatar": "string"   // 头像URL，可选
+  "name": "新用户名",
+  "avatar": "https://new-avatar-url.com"
 }
 ```
 
-**成功响应：**
+---
 
+### 3. 修改密码
+`POST /user/change-password`
+
+**请求体：**
+```json
+{
+  "oldPassword": "旧密码",
+  "newPassword": "新密码"
+}
+```
+
+---
+
+## 聊天会话接口 (Chat Sessions)
+
+> 🔐 所有接口需要 Bearer Token
+
+### 1. 获取所有会话
+`GET /chat/sessions`
+
+**查询参数：**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | int | 1 | 页码 |
+| `pageSize` | int | 20 | 每页数量 |
+
+**响应示例：**
 ```json
 {
   "code": 200,
-  "message": "更新成功",
+  "message": "获取成功",
   "data": {
-    "user": {
-      "id": "string",
-      "name": "string",
-      "email": "string",
-      "avatar": "string",
-      "createdAt": "number"
-    }
+    "sessions": [...],
+    "total": 100,
+    "page": 1,
+    "pageSize": 20
   }
 }
 ```
 
 ---
 
-### 4.3 修改密码
+### 2. 创建新会话
+`POST /chat/sessions`
 
-**接口说明：** 修改用户密码
-
-**请求方式：** `POST`
-
-**请求路径：** `/api/v1/user/change-password`
-
-**是否需要认证：** 是
-
-**请求头：**
-
-```
-Authorization: Bearer <token>
-```
-
-**请求参数（Body）：**
-
+**请求体（可选）：**
 ```json
 {
-  "oldPassword": "string",   // 旧密码，必填
-  "newPassword": "string"    // 新密码，必填，最小长度 6
+  "title": "会话标题"
 }
 ```
 
-**成功响应：**
+---
 
+### 3. 获取指定会话
+`GET /chat/sessions/{sessionId}`
+
+---
+
+### 4. 更新会话标题
+`PATCH /chat/sessions/{sessionId}`
+
+**请求体：**
+```json
+{
+  "title": "新标题"
+}
+```
+
+---
+
+### 5. 删除会话
+`DELETE /chat/sessions/{sessionId}`
+
+---
+
+## 消息接口 (Messages)
+
+> 🔐 所有接口需要 Bearer Token
+
+### 1. 发送消息
+`POST /chat/sessions/{sessionId}/messages`
+
+**请求体：**
+```json
+{
+  "content": "消息内容",
+  "mode": "disabled",
+  "imageData": "base64编码图片（可选）",
+  "imageMimeType": "image/jpeg（可选）",
+  "messageId": "重新生成时的消息ID（可选）"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `content` | String | ✅ | 消息内容 |
+| `mode` | String | ✅ | AI 模式：`disabled`（快速）/ `enabled`（思考）/ `picture`（生图） |
+| `imageData` | String | ❌ | Base64 编码图片（不含 data: 前缀） |
+| `imageMimeType` | String | ❌ | 图片 MIME 类型（如 image/jpeg） |
+| `messageId` | String | ❌ | 重新生成时指定的消息 ID |
+
+---
+
+### 2. 流式发送消息 (SSE)
+`POST /chat/sessions/{sessionId}/messages/stream`
+
+**Content-Type**: `text/event-stream`
+
+**请求体：** 同上
+
+**SSE 事件格式：**
+```
+data: {"type":"text","text":"AI回复内容..."}
+
+data: {"type":"reasoning","text":"思考过程..."}
+
+event: done
+data: [DONE]
+```
+
+---
+
+### 3. 获取会话消息
+`GET /chat/sessions/{sessionId}/messages`
+
+**查询参数：**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | int | 1 | 页码 |
+| `pageSize` | int | 50 | 每页数量 |
+
+---
+
+### 4. 修改消息
+`PUT /chat/sessions/{sessionId}/messages/{messageId}`
+
+**请求体：**
+```json
+{
+  "content": "修改后的内容"
+}
+```
+
+---
+
+### 5. 删除消息
+`DELETE /chat/sessions/{sessionId}/messages/{messageId}`
+
+---
+
+### 6. 删除消息及之后的所有消息
+`DELETE /chat/sessions/{sessionId}/messages/{messageId}/after`
+
+---
+
+## 图片接口 (Images)
+
+> 🔐 需要 Bearer Token
+
+### 1. 获取用户历史图片
+`GET /images`
+
+**查询参数：**
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `limit` | int | ❌ | 限制返回数量 |
+
+---
+
+## AI 工具接口 (AI Tools)
+
+> 🔐 需要 Bearer Token
+
+### 1. 润色文本
+`POST /ai/polish`
+
+**请求体：**
+```json
+{
+  "text": "需要润色的文本"
+}
+```
+
+**响应示例：**
 ```json
 {
   "code": 200,
-  "message": "密码修改成功"
+  "message": "润色成功",
+  "data": {
+    "polishedText": "润色后的文本"
+  }
 }
 ```
 
-**错误响应：**
+---
 
+## 管理员接口 (Admin)
+
+### 1. 管理员登录
+`POST /admin/login`
+
+**请求体：**
+```json
+{
+  "email": "admin@example.com",
+  "password": "adminpassword"
+}
+```
+
+---
+
+### 2. 获取用户列表
+`GET /admin/users` 🔐
+
+**查询参数：**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | int | 1 | 页码 |
+| `pageSize` | int | 20 | 每页数量 |
+| `keyword` | String | - | 搜索关键词（可选） |
+
+---
+
+### 3. 封禁用户
+`POST /admin/users/{userId}/ban` 🔐
+
+**查询参数：**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `days` | int | 0 | 封禁天数（0 = 永久） |
+
+---
+
+### 4. 解封用户
+`POST /admin/users/{userId}/unban` 🔐
+
+---
+
+### 5. 删除用户
+`DELETE /admin/users/{userId}` 🔐
+
+---
+
+### 6. 批量封禁用户
+`POST /admin/users/batch-ban` 🔐
+
+**请求体：**
+```json
+["userId1", "userId2", "userId3"]
+```
+
+---
+
+### 7. 批量解封用户
+`POST /admin/users/batch-unban` 🔐
+
+**请求体：** 同上
+
+---
+
+### 8. 批量删除用户
+`POST /admin/users/batch-delete` 🔐
+
+**请求体：** 同上
+
+---
+
+### 9. 获取操作日志
+`GET /admin/logs/operations` 🔐
+
+**查询参数：**
+| 参数 | 类型 | 默认值 |
+|------|------|--------|
+| `page` | int | 1 |
+| `pageSize` | int | 20 |
+
+---
+
+### 10. 获取登录日志
+`GET /admin/logs/logins` 🔐
+
+**查询参数：**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | int | 1 | - |
+| `pageSize` | int | 20 | - |
+| `userId` | String | - | 按用户筛选（可选） |
+
+---
+
+### 11. 获取用户登录历史
+`GET /admin/users/{userId}/login-history` 🔐
+
+---
+
+### 12. 删除用户消息（管理员）
+`DELETE /admin/messages/{messageId}` 🔐
+
+---
+
+## 统计接口 (Statistics)
+
+> 🔐 需要管理员权限
+
+### 1. 获取总览统计
+`GET /admin/statistics/overview`
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "data": {
+    "totalUsers": 1000,
+    "totalMessages": 50000,
+    "totalSessions": 3000,
+    "todayActiveUsers": 50
+  }
+}
+```
+
+---
+
+### 2. 获取用户增长趋势
+`GET /admin/statistics/user-growth`
+
+---
+
+### 3. 获取消息趋势
+`GET /admin/statistics/message-trend`
+
+---
+
+### 4. 获取活跃用户排行
+`GET /admin/statistics/active-ranking`
+
+**查询参数：**
+| 参数 | 类型 | 默认值 |
+|------|------|--------|
+| `limit` | int | 10 |
+
+---
+
+### 5. 获取 24 小时活动分布
+`GET /admin/statistics/hourly-activity`
+
+---
+
+### 6. 获取用户详细统计
+`GET /admin/users/{userId}/detail`
+
+---
+
+## 业务状态码说明
+
+### 状态码总览
+
+| 状态码 | 类型 | 说明 |
+|--------|------|------|
+| `200` | ✅ 成功 | 请求成功 |
+| `400` | ❌ 客户端错误 | 请求参数错误 |
+| `401` | ❌ 认证错误 | 未认证或认证失败 |
+| `403` | ❌ 权限错误 | 权限不足 |
+| `404` | ❌ 资源错误 | 资源不存在 |
+| `500` | ❌ 服务器错误 | 服务器内部错误 |
+
+---
+
+### 详细说明
+
+#### 200 - 成功
+请求已成功处理。
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "message": "成功",
+  "data": { ... }
+}
+```
+
+---
+
+#### 400 - 请求参数错误
+请求参数不符合要求，可能的原因：
+
+| 触发场景 | 错误消息示例 |
+|----------|-------------|
+| 邮箱已被注册 | `该邮箱已被注册` |
+| 字段验证失败 | `姓名不能为空`、`邮箱格式不正确`、`密码长度至少为 6 位` |
+| 参数类型错误 | `参数验证失败` |
+| 非法参数 | 具体错误信息 |
+
+**响应示例：**
+```json
+{
+  "code": 400,
+  "message": "该邮箱已被注册",
+  "data": null
+}
+```
+
+**前端处理建议：** 显示 `message` 内容给用户，引导用户修正输入。
+
+---
+
+#### 401 - 未认证 / 认证失败
+用户未登录或认证信息无效，可能的原因：
+
+| 触发场景 | 错误消息示例 |
+|----------|-------------|
+| 邮箱或密码错误 | `邮箱或密码错误` |
+| Token 无效或过期 | `认证失败` |
+| 未携带 Token | `认证失败` |
+| 二次认证码错误 | `验证码错误或已过期` |
+| 账号被封禁 | `账号已被封禁` |
+
+**响应示例：**
 ```json
 {
   "code": 401,
-  "message": "旧密码错误"
+  "message": "邮箱或密码错误",
+  "data": null
 }
 ```
 
+**前端处理建议：**
+- 密码错误：提示用户检查邮箱和密码
+- Token 失效：清除本地 Token，跳转到登录页
+- 账号封禁：显示封禁提示，禁止登录
+
 ---
 
-## 5. 通用数据结构
+#### 403 - 权限不足
+用户已认证，但没有权限执行该操作，可能的原因：
 
-### 5.1 用户对象（User）
+| 触发场景 | 错误消息示例 |
+|----------|-------------|
+| 访问他人会话 | `无权访问该会话` |
+| 访问他人消息 | `无权访问该消息` |
+| 非管理员访问管理接口 | `权限不足` |
 
-```typescript
-interface User {
-  id: string;           // 用户唯一标识
-  name: string;         // 用户姓名
-  email: string;        // 邮箱地址
-  avatar: string;       // 头像URL
-  createdAt: number;    // 创建时间戳（毫秒）
+**响应示例：**
+```json
+{
+  "code": 403,
+  "message": "无权访问该会话",
+  "data": null
 }
 ```
 
+**前端处理建议：** 显示权限不足提示，不跳转登录页。
+
 ---
 
-### 5.2 会话对象（ChatSession）
+#### 404 - 资源不存在
+请求的资源不存在，可能的原因：
 
-```typescript
-interface ChatSession {
-  id: string;              // 会话唯一标识
-  title: string;           // 会话标题
-  messages: Message[];     // 消息列表
-  createdAt: number;       // 创建时间戳
-  updatedAt: number;       // 最后更新时间戳
+| 触发场景 | 错误消息示例 |
+|----------|-------------|
+| 用户不存在 | `用户不存在` |
+| 会话不存在 | `会话不存在` |
+| 消息不存在 | `消息不存在` |
+
+**响应示例：**
+```json
+{
+  "code": 404,
+  "message": "会话不存在",
+  "data": null
 }
 ```
 
+**前端处理建议：** 显示提示信息，考虑跳转到列表页或首页。
+
 ---
 
-### 5.3 消息对象（Message）
+#### 500 - 服务器内部错误
+服务器发生未知错误，可能的原因：
 
-```typescript
-interface Message {
-  id: string;                       // 消息唯一标识
-  sender: "user" | "robot";         // 发送者类型
-  message: {
-    content: string;                  // 消息内容
-    reasoning_content: string | "";   // AI 推理过程（仅机器人消息，思考模式下有值）
-  };
-  time: number;                     // 消息时间戳
+| 触发场景 | 错误消息示例 |
+|----------|-------------|
+| AI 服务调用失败 | `AI 服务暂时不可用`、`图片生成失败` |
+| 数据库异常 | `服务器内部错误` |
+| 未知异常 | `服务器内部错误` |
+
+**响应示例：**
+```json
+{
+  "code": 500,
+  "message": "AI 服务暂时不可用",
+  "data": null
 }
 ```
 
----
-
-## 6. 错误码说明
-
-### 6.1 HTTP 状态码
-
-| 状态码 | 说明 |
-|--------|------|
-| 200 | 请求成功 |
-| 400 | 请求参数错误 |
-| 401 | 未授权（Token 无效或过期） |
-| 403 | 禁止访问（权限不足） |
-| 404 | 资源不存在 |
-| 408 | 请求超时 |
-| 500 | 服务器内部错误 |
-
-### 6.2 业务错误码
-
-业务错误码在响应体的 `code` 字段中返回：
-
-| 错误码 | 说明 |
-|--------|------|
-| 200 | 成功 |
-| 400 | 参数错误 |
-| 401 | 认证失败 |
-| 403 | 操作被拒绝 |
-| 404 | 资源不存在 |
-| 408 | 请求超时 |
-| 409 | 资源冲突（如邮箱已存在） |
-| 500 | 服务器错误 |
+**前端处理建议：** 显示友好的错误提示，建议用户稍后重试。
 
 ---
 
-## 7. 认证说明
-
-### 7.1 Token 获取
-
-用户通过 `/api/v1/auth/login` 或 `/api/v1/auth/register` 接口登录或注册成功后，服务端会返回一个 JWT Token。
-
-### 7.2 Token 使用
-
-前端需要在所有需要认证的接口请求头中携带此 Token：
-
-```
-Authorization: Bearer <your_token_here>
-```
-
-### 7.3 Token 过期处理
-
-- Token 默认有效期建议为 7 天
-- Token 过期后，前端应引导用户重新登录
-- 可以实现 Token 刷新机制（可选）
-
----
-
-## 8. AI 模型集成说明
-
-### 8.1 AI 服务端点
-
-后端需要集成 AI 对话服务（如 OpenAI、字节跳动豆包等）。当前前端使用的是：
-
-- **服务商：** 字节跳动豆包
-- **端点：** `https://ark.cn-beijing.volces.com/api/v3/chat/completions`
-- **模型：** `doubao-seed-1-6-lite-251015`
-
-### 8.2 两种对话模式
-
-1. **快速模式（mode="disabled"）：** 
-   - 不返回推理过程
-   - `reasoning_content` 为空字符串
-
-2. **思考模式（mode="enabled"）：**
-   - 返回 AI 的推理过程
-   - `reasoning_content` 包含详细的思考步骤
-
-### 8.3 系统提示词
-
-建议后端使用以下系统提示词：
-
-```
-你是一个智能助手，名为AI助手。你的任务是帮助用户解决问题、提供信息、给出建议，并保持友好和礼貌。你应遵守以下原则：
-1. 积极、耐心、乐于助人，尽量用清晰、易理解的语言回答用户问题。
-2. 优先提供准确、有条理的信息，必要时解释背景或给出步骤。
-3. 避免发表歧视、攻击或不当内容，不生成敏感或违法信息。
-4. 当用户提出技术、学习或计算问题时，展示详细步骤和思考过程。
-5. 适度使用例子、列表或表格辅助说明，让回答更直观易懂。
-6. 根据用户需求调整语气和风格，可以适当幽默或轻松，但保持专业。
-7. 当信息不确定时，要明确说明，并建议用户查证。
-```
-
----
-
-## 9. 安全性建议
-
-### 9.1 密码存储
-
-- 使用 bcrypt 或 argon2 等安全哈希算法存储密码
-- 不要明文存储密码
-
-### 9.2 API 限流
-
-建议对以下接口进行限流：
-
-- 登录接口：防止暴力破解（如：5次/分钟）
-- 注册接口：防止恶意注册（如：3次/小时）
-- AI 对话接口：防止滥用（如：30次/分钟）
-
-### 9.3 输入验证
-
-- 对所有用户输入进行验证和清理
-- 防止 SQL 注入、XSS 攻击
-
-### 9.4 CORS 设置
-
-- 合理配置 CORS 策略
-- 仅允许信任的域名访问
-
----
-
-## 10. 环境配置建议
-
-### 10.1 环境变量
-
-```env
-# 服务器配置
-PORT=3000
-NODE_ENV=production
-
-# 数据库配置
-DATABASE_URL=your_database_url
-DATABASE_NAME=chatbot_db
-
-# JWT 配置
-JWT_SECRET=your_secret_key
-JWT_EXPIRES_IN=7d
-
-# AI 服务配置
-AI_API_URL=https://ark.cn-beijing.volces.com/api/v3/chat/completions
-AI_API_KEY=your_api_key
-AI_MODEL=doubao-seed-1-6-lite-251015
-AI_TIMEOUT=30000
-
-# 头像服务
-AVATAR_SERVICE_URL=https://api.dicebear.com/7.x/avataaars/svg
-```
-
----
-
-## 11. 数据库设计建议
-
-### 11.1 用户表（users）
-
-```sql
-CREATE TABLE users (
-  id VARCHAR(36) PRIMARY KEY,
-  name VARCHAR(50) NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  avatar VARCHAR(500),
-  created_at BIGINT NOT NULL,
-  updated_at BIGINT NOT NULL
-);
-
-CREATE INDEX idx_users_email ON users(email);
-```
-
-### 11.2 会话表（chat_sessions）
-
-```sql
-CREATE TABLE chat_sessions (
-  id VARCHAR(36) PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
-  title VARCHAR(200) NOT NULL,
-  created_at BIGINT NOT NULL,
-  updated_at BIGINT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_sessions_user_id ON chat_sessions(user_id);
-CREATE INDEX idx_sessions_updated_at ON chat_sessions(updated_at);
-```
-
-### 11.3 消息表（messages）
-
-```sql
-CREATE TABLE messages (
-  id VARCHAR(36) PRIMARY KEY,
-  session_id VARCHAR(36) NOT NULL,
-  sender ENUM('user', 'robot') NOT NULL,
-  content TEXT NOT NULL,
-  reasoning_content TEXT,
-  time BIGINT NOT NULL,
-  FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_messages_session_id ON messages(session_id);
-CREATE INDEX idx_messages_time ON messages(time);
-```
-
----
-
-## 12. 接口调用示例
-
-### 12.1 用户注册示例（JavaScript）
+### 错误处理最佳实践
 
 ```javascript
-async function register(name, email, password) {
-  try {
-    const response = await fetch('/api/v1/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, password })
-    });
-    
-    const data = await response.json();
-    
-    if (data.code === 200) {
-      // 保存 token
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('user', JSON.stringify(data.data.user));
+// 示例：统一错误处理
+async function handleApiResponse(response) {
+  const data = await response.json();
+  
+  switch (data.code) {
+    case 200:
       return data.data;
-    } else {
+    case 400:
+      // 参数错误，显示具体错误信息
       throw new Error(data.message);
-    }
-  } catch (error) {
-    console.error('注册失败:', error);
-    throw error;
-  }
-}
-```
-
-### 12.2 发送消息示例（JavaScript）
-
-```javascript
-async function sendMessage(sessionId, content, mode) {
-  try {
-    const token = localStorage.getItem('token');
-    
-    const response = await fetch(`/api/v1/chat/sessions/${sessionId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ content, mode })
-    });
-    
-    const data = await response.json();
-    
-    if (data.code === 200) {
-      return data.data;
-    } else {
+    case 401:
+      // 认证失败，清除 Token 并跳转登录
+      localStorage.removeItem('token');
+      window.location.href = '/login';
       throw new Error(data.message);
-    }
-  } catch (error) {
-    console.error('发送消息失败:', error);
-    throw error;
+    case 403:
+      // 权限不足
+      throw new Error('您没有权限执行此操作');
+    case 404:
+      // 资源不存在
+      throw new Error(data.message);
+    case 500:
+      // 服务器错误
+      throw new Error('服务器繁忙，请稍后重试');
+    default:
+      throw new Error('未知错误');
   }
 }
 ```
 
 ---
 
-## 13. 前端集成提示
-
-### 13.1 当前前端实现方式
-
-当前前端使用 `localStorage` 进行数据持久化，包括：
-
-- `chat_user`: 用户信息
-- `chat_users_db`: 模拟的用户数据库
-- `chat_sessions`: 所有聊天会话
-- `current_chat_id`: 当前选中的会话 ID
-
-### 13.2 迁移到后端的建议
-
-1. **替换 `useAuth` Hook**：
-   - 将注册和登录逻辑改为调用后端 API
-   - 从响应中获取并存储 Token
-
-2. **替换 `useChatSessions` Hook**：
-   - 从后端 API 加载会话列表，而不是 localStorage
-   - 创建、删除、更新会话时调用对应的后端接口
-
-3. **修改 `ChatInput` 组件**：
-   - 将 `GetAiRespond` 函数改为调用后端的消息接口
-   - 不再直接调用豆包 API
-
-4. **添加 Token 过期处理**：
-   - 在全局请求拦截器中检测 401 错误
-   - 自动跳转到登录页面
-
----
-
-## 14. 版本历史
-
-| 版本 | 日期 | 更新内容 |
-|------|------|----------|
-| 1.0.0 | 2025-11-24 | 初始版本，定义完整的 API 接口 |
-
----
-
-## 15. 联系方式与支持
-
-如有疑问或需要技术支持，请联系：
-
-- **项目文档**：README.md
-- **前端仓库**：d:/dev/frontend/react-course/chatbot
-
----
-
-**文档结束**
+> 📝 **最后更新**: 2026-02-01

@@ -21,14 +21,12 @@
 .chat-user-msg {
   display: flex;
   justify-content: flex-end;
-  /* 用户消息靠右 */
   margin-bottom: 20px;
 }
 
 .chat-robot-msg {
   display: flex;
   justify-content: flex-start;
-  /* 机器人消息靠左 */
   margin-bottom: 20px;
 }
 
@@ -134,8 +132,6 @@
   margin: 0 5px;
 }
 
-/* === 搜索功能样式 === */
-
 /* 消息列表包装器 */
 .chat-messages-wrapper {
   display: flex;
@@ -145,223 +141,6 @@
   /* 关键：允许内容被压缩 */
   overflow: hidden;
   position: relative;
-}
-
-/* 搜索栏容器 */
-.search-bar-container {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  gap: 8px;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.search-bar-container.search-open {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05));
-}
-
-/* 搜索切换按钮 */
-.search-toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: none;
-  background: var(--muted);
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.search-toggle-btn:hover {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  transform: scale(1.05);
-}
-
-.search-open .search-toggle-btn {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  color: white;
-}
-
-/* 搜索输入框包装器 */
-.search-input-wrapper {
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  gap: 8px;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* 搜索输入框 */
-.search-input {
-  flex-grow: 1;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-.search-input::placeholder {
-  color: var(--muted-foreground);
-}
-
-/* 搜索结果计数 */
-.search-count {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  padding: 4px 8px;
-  background: var(--muted);
-  border-radius: 4px;
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-/* 搜索导航按钮组 */
-.search-nav-buttons {
-  display: flex;
-  gap: 2px;
-}
-
-.search-nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: none;
-  background: var(--muted);
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.search-nav-btn:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
-
-.search-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* 清除搜索按钮 */
-.search-clear-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.search-clear-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-/* 搜索匹配的消息高亮 */
-.search-match {
-  position: relative;
-  animation: highlightPulse 0.5s ease;
-  margin-left: 16px;
-  margin-bottom: 24px;
-  padding-left: 8px;
-}
-
-.search-match::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
-  border-radius: 3px;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-}
-
-@keyframes highlightPulse {
-  0% {
-    background-color: rgba(59, 130, 246, 0.25);
-  }
-
-  100% {
-    background-color: transparent;
-  }
-}
-
-/* Markdown 中的高亮标记样式 - 更加醒目 */
-.search-match .chat-msg-text mark,
-.search-match .chat-msg-text strong em,
-.chat-msg-text mark {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #000000;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-style: normal;
-  font-weight: 700;
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.4);
-  text-shadow: none;
-}
-
-/* Dark mode 高亮样式调整 - 同样醒目 */
-.dark .search-match .chat-msg-text mark,
-.dark .chat-msg-text mark {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #000000;
-  box-shadow: 0 1px 4px rgba(251, 191, 36, 0.5);
-}
-
-/* 响应式调整 */
-@media (max-width: 640px) {
-  .search-bar-container {
-    padding: 8px 12px;
-  }
-
-  .search-count {
-    display: none;
-  }
-
-  .search-input {
-    font-size: 16px;
-    /* 避免 iOS 自动缩放 */
-  }
 }
 
 /* 用户上传的图片样式 */

@@ -454,7 +454,7 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
 
         <Textarea
           ref={inputRef}
-          placeholder={Loading ? "Loading..." : (editingMessage ? "Editing message..." : "Send a message to Chatbot")}
+          placeholder={Loading ? t('common.loading') : (editingMessage ? t("chat.editingMessage") : t("chat.inputPlaceholder"))}
           disabled={Loading}
           onChange={saveInputText}
           onKeyDown={(event) => {
@@ -499,15 +499,15 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           </Button>
         )}
         <NativeSelect onChange={handleSelectChange} className='shrink-0 w-max'>
-          <NativeSelectOption value='disabled' className='shrink-0'>Fast</NativeSelectOption>
-          <NativeSelectOption value='enabled' className='shrink-0'>Think</NativeSelectOption>
-          <NativeSelectOption value='picture' className='shrink-0'>Picture</NativeSelectOption>
+          <NativeSelectOption value='disabled' className='shrink-0'>{t('mode.fast')}</NativeSelectOption>
+          <NativeSelectOption value='enabled' className='shrink-0'>{t('mode.think')}</NativeSelectOption>
+          <NativeSelectOption value='picture' className='shrink-0'>{t('mode.picture')}</NativeSelectOption>
         </NativeSelect>
         <Button
           disabled={Loading}
           onClick={sendMessage}
           className="send-button ml-3"
-        >{editingMessage ? 'Resend' : 'Send'}</Button>
+        >{editingMessage ? t('chat.resend') : t('chat.send')}</Button>
       </div ></div>
 
   );

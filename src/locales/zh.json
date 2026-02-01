@@ -2,18 +2,20 @@
   "common": {
     "loading": "加载中..."
   },
+  "mode": {
+    "fast": "快速",
+    "think": "思考",
+    "picture": "图片"
+  },
   "chat": {
     "inputPlaceholder": "给 Chatbot 发送消息",
+    "edtingMessage": "编辑信息中...",
     "send": "发送",
+    "resend": "重新发送",
     "modeFast": "快速",
     "modeThink": "思考",
     "modePicture": "图片",
     "error": "抱歉，处理您的请求时遇到了错误。",
-    "searchPlaceholder": "搜索消息...",
-    "searchTooltip": "搜索消息 (Ctrl+F)",
-    "prevMatch": "上一个 (Shift+Enter)",
-    "nextMatch": "下一个 (Enter)",
-    "clearSearch": "清除搜索",
     "hideThinking": "隐藏思考过程",
     "showThinking": "显示思考过程",
     "copy": "复制",

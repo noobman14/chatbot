@@ -1,5 +1,5 @@
 import { useAutoScroll } from './useAutoScroll';
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
 
@@ -16,7 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { ChevronsUpDown, Search, X, ChevronUp, ChevronDown, Pencil, Trash2, CheckSquare, Square, ListChecks, Copy, Download } from 'lucide-react';
+import { ChevronsUpDown, Pencil, Copy, Download } from 'lucide-react';
 
 // 定义单条消息的类型结构
 interface ChatMessageType {
@@ -34,8 +34,6 @@ interface ChatMessagesProps {
   chatMessages: ChatMessageType[];
 
   onStartEdit?: (id: string | number, content: string) => void;
-  onDeleteMessage?: (id: string | number) => void;
-  onBatchDelete?: (ids: (string | number)[]) => void;
   userAvatar?: string; // 用户头像 URL
 }
 
@@ -66,29 +64,17 @@ function isImageUrl(urlString: string) {
 
 
 
-// 带搜索高亮的消息组件
-function ChatMessageWithHighlight({
+// 消息组件
+function ChatMessageItem({
   message,
   sender,
   time,
   id,
   imageUrl,
-  searchKeyword,
-  isMatch,
   onStartEdit,
-  onDelete,
-  isMultiSelectMode,
-  isSelected,
-  onToggleSelect,
   userAvatar
 }: ChatMessageType & {
-  searchKeyword: string;
-  isMatch: boolean;
   onStartEdit?: (id: string | number, content: string) => void;
-  onDelete?: (id: string | number) => void;
-  isMultiSelectMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: (id: string | number) => void;
   userAvatar?: string;
 }) {
 
@@ -161,20 +147,7 @@ function ChatMessageWithHighlight({
       );
     }
 
-    // 如果有搜索关键词且匹配，使用简单的高亮显示
-    if (searchKeyword && isMatch) {
-      const highlightedContent = message.content.replace(
-        new RegExp(`(${searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-        '**==$1==**'
-      );
-      return (
-        <div className={markdownStyles}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {highlightedContent}
-          </ReactMarkdown>
-        </div>
-      );
-    }
+
 
     return (
       <div className={markdownStyles}>
@@ -186,7 +159,7 @@ function ChatMessageWithHighlight({
   };
 
   return (
-    <div className={cn('chat-msg-area group', isMatch && searchKeyword && 'search-match')} data-message-id={id}>
+    <div className={cn('chat-msg-area group')} data-message-id={id}>
       {message.reasoning_content && (
         <div className='reasoning-area mb-4 w-full'>
           <Collapsible
@@ -214,19 +187,6 @@ function ChatMessageWithHighlight({
         </div>
       )}
       <div className={sender === 'user' ? 'chat-user-msg relative' : 'chat-robot-msg relative'}>
-        {/* 多选复选框 */}
-        {isMultiSelectMode && (
-          <button
-            onClick={() => onToggleSelect && onToggleSelect(id)}
-            className="shrink-0 p-1 mr-2"
-          >
-            {isSelected ? (
-              <CheckSquare size={18} className="text-blue-500" />
-            ) : (
-              <Square size={18} className="text-zinc-400" />
-            )}
-          </button>
-        )}
         {sender === 'robot' && (
           <img src={RobotProfileImage}
             className="chat-message-profile"
@@ -264,13 +224,6 @@ function ChatMessageWithHighlight({
                 >
                   <Pencil size={12} />
                 </button>
-                <button
-                  onClick={() => onDelete && onDelete(id)}
-                  className="p-1 text-zinc-500 hover:text-red-600"
-                  title="Withdraw"
-                >
-                  <Trash2 size={12} />
-                </button>
               </div>
             )}
             {/* AI 消息的复制按钮 */}
@@ -302,269 +255,22 @@ function ChatMessageWithHighlight({
 export function ChatMessages(props: ChatMessagesProps) {
   const { chatMessages, userAvatar } = props;
 
-
-  // 搜索相关状态
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-
-  // 多选模式状态
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
-
   // 使用自定义 Hook 实现消息列表自动滚动到底部
   const chatMsgRef = useAutoScroll([chatMessages]);
 
-  // 过滤匹配的消息
-  const matchedMessages = useMemo(() => {
-    if (!searchKeyword.trim()) return [];
-    return chatMessages.filter(msg =>
-      msg.message.content.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (msg.message.reasoning_content && msg.message.reasoning_content.toLowerCase().includes(searchKeyword.toLowerCase()))
-    );
-  }, [chatMessages, searchKeyword]);
-
-  // 跳转到指定匹配项
-  const scrollToMatch = useCallback((index: number) => {
-    if (matchedMessages.length === 0 || index < 0 || index >= matchedMessages.length) return;
-    const targetMessage = matchedMessages[index];
-    if (!targetMessage) return;
-
-    // 使用 setTimeout 确保 DOM 更新后再滚动
-    setTimeout(() => {
-      const element = document.querySelector(`[data-message-id="${targetMessage.id}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 50);
-  }, [matchedMessages]);
-
-  // 当 currentMatchIndex 变化时自动滚动到对应消息
-  useEffect(() => {
-    if (searchKeyword && matchedMessages.length > 0) {
-      scrollToMatch(currentMatchIndex);
-    }
-  }, [currentMatchIndex, matchedMessages.length, searchKeyword]);
-
-  // 导航到上一个匹配项
-  const goToPrevMatch = useCallback(() => {
-    if (matchedMessages.length === 0) return;
-    setCurrentMatchIndex(prev => {
-      return prev === 0 ? matchedMessages.length - 1 : prev - 1;
-    });
-  }, [matchedMessages.length]);
-
-  // 导航到下一个匹配项
-  const goToNextMatch = useCallback(() => {
-    if (matchedMessages.length === 0) return;
-    setCurrentMatchIndex(prev => {
-      return prev === matchedMessages.length - 1 ? 0 : prev + 1;
-    });
-  }, [matchedMessages.length]);
-
-  // 清除搜索
-  const clearSearch = useCallback(() => {
-    setSearchKeyword('');
-    setCurrentMatchIndex(0);
-  }, []);
-
-  // 切换搜索框显示
-  const toggleSearch = useCallback(() => {
-    setIsSearchOpen(prev => !prev);
-    if (isSearchOpen) {
-      clearSearch();
-    }
-  }, [isSearchOpen, clearSearch]);
-
-  // 处理搜索输入
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchKeyword(e.target.value);
-    setCurrentMatchIndex(0);
-  }, []);
-
-  // 处理键盘事件
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        goToPrevMatch();
-      } else {
-        goToNextMatch();
-      }
-    } else if (e.key === 'Escape') {
-      toggleSearch();
-    }
-  }, [goToNextMatch, goToPrevMatch, toggleSearch]);
-
-  // 判断消息是否匹配
-  const isMessageMatch = useCallback((msg: ChatMessageType): boolean => {
-    if (!searchKeyword.trim()) return false;
-    const contentMatch = msg.message.content.toLowerCase().includes(searchKeyword.toLowerCase());
-    const reasoningMatch = msg.message.reasoning_content
-      ? msg.message.reasoning_content.toLowerCase().includes(searchKeyword.toLowerCase())
-      : false;
-    return contentMatch || reasoningMatch;
-  }, [searchKeyword]);
-
-  // 切换多选模式
-  const toggleMultiSelectMode = useCallback(() => {
-    setIsMultiSelectMode(prev => !prev);
-    setSelectedIds(new Set()); // 清空选中项
-  }, []);
-
-  // 切换单个消息的选中状态
-  const toggleSelect = useCallback((id: string | number) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  }, []);
-
-  // 全选/取消全选
-  const toggleSelectAll = useCallback(() => {
-    if (selectedIds.size === chatMessages.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(chatMessages.map(m => m.id)));
-    }
-  }, [chatMessages, selectedIds.size]);
-
-  // 批量删除
-  const handleBatchDelete = useCallback(() => {
-    if (selectedIds.size === 0) return;
-    if (!window.confirm(`确定要删除这 ${selectedIds.size} 条消息吗？`)) return;
-
-    if (props.onBatchDelete) {
-      props.onBatchDelete(Array.from(selectedIds));
-    }
-    setSelectedIds(new Set());
-    setIsMultiSelectMode(false);
-  }, [selectedIds, props.onBatchDelete]);
-
   return (
     <div className="chat-messages-wrapper">
-      {/* 工具栏：搜索 + 多选 */}
-      <div className={cn("search-bar-container", isSearchOpen && "search-open")}>
-        <button
-          className="search-toggle-btn"
-          onClick={toggleSearch}
-          title="搜索消息 (Ctrl+F)"
-        >
-          <Search size={18} />
-        </button>
-
-        {/* 多选模式切换按钮 */}
-        <button
-          className={cn("search-toggle-btn ml-2", isMultiSelectMode && "bg-blue-500 text-white")}
-          onClick={toggleMultiSelectMode}
-          title="多选模式"
-        >
-          <ListChecks size={18} />
-        </button>
-
-        {isSearchOpen && (
-          <div className="search-input-wrapper">
-            <input
-              type="text"
-              className="search-input"
-              placeholder="搜索消息..."
-              value={searchKeyword}
-              onChange={handleSearchChange}
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-            {searchKeyword && (
-              <>
-                <span className="search-count">
-                  {matchedMessages.length > 0
-                    ? `${currentMatchIndex + 1}/${matchedMessages.length}`
-                    : '0/0'
-                  }
-                </span>
-                <div className="search-nav-buttons">
-                  <button
-                    className="search-nav-btn"
-                    onClick={goToPrevMatch}
-                    disabled={matchedMessages.length === 0}
-                    title="上一个 (Shift+Enter)"
-                  >
-                    <ChevronUp size={16} />
-                  </button>
-                  <button
-                    className="search-nav-btn"
-                    onClick={goToNextMatch}
-                    disabled={matchedMessages.length === 0}
-                    title="下一个 (Enter)"
-                  >
-                    <ChevronDown size={16} />
-                  </button>
-                </div>
-                <button
-                  className="search-clear-btn"
-                  onClick={clearSearch}
-                  title="清除搜索"
-                >
-                  <X size={16} />
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 多选操作栏 */}
-      {isMultiSelectMode && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 border-b">
-          <button
-            onClick={toggleSelectAll}
-            className="flex items-center gap-1 px-2 py-1 text-sm rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
-          >
-            {selectedIds.size === chatMessages.length ? (
-              <><CheckSquare size={16} /> 取消全选</>
-            ) : (
-              <><Square size={16} /> 全选</>
-            )}
-          </button>
-          <span className="text-sm text-zinc-500">
-            已选中 {selectedIds.size} 条
-          </span>
-          <button
-            onClick={handleBatchDelete}
-            disabled={selectedIds.size === 0}
-            className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 rounded hover:bg-red-100 dark:hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={16} /> 删除选中
-          </button>
-          <button
-            onClick={toggleMultiSelectMode}
-            className="ml-auto text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
-          >
-            取消
-          </button>
-        </div>
-      )}
-
       {/* 消息列表 */}
       <div className="chat-message-container" ref={chatMsgRef}>
         {chatMessages.map((chatMessage) => (
-          <ChatMessageWithHighlight
+          <ChatMessageItem
             key={chatMessage.id}
             id={chatMessage.id}
             message={chatMessage.message}
             sender={chatMessage.sender}
             time={chatMessage.time}
             imageUrl={chatMessage.imageUrl}
-            searchKeyword={searchKeyword}
-            isMatch={isMessageMatch(chatMessage)}
             onStartEdit={props.onStartEdit}
-            onDelete={props.onDeleteMessage}
-            isMultiSelectMode={isMultiSelectMode}
-            isSelected={selectedIds.has(chatMessage.id)}
-            onToggleSelect={toggleSelect}
             userAvatar={userAvatar}
           />
         ))}
