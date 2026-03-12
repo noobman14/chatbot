@@ -1,4 +1,4 @@
-# 🤖 智能 AI 聊天机器人 (前端)
+# 智能 AI 聊天机器人 (前端)
 
 ![React](https://img.shields.io/badge/React-19.1.0-blue?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript)
@@ -8,25 +8,25 @@
 
 这是一个基于 React 和 TypeScript 构建的现代化、响应式且功能丰富的 AI 聊天机器人应用。它支持实时流式响应、安全认证，并拥有适配桌面和移动端的精美 UI。
 
-## ✨ 核心功能
+## 核心功能
 
-### 🧠 智能交互
+### 智能交互
 - **实时流式响应 (SSE)**：使用服务器发送事件 (Server-Sent Events) 实现打字机风格的 AI 回复，提供即时反馈。
 - **深度思考模式**：支持切换“思考模式”，展示 AI 的推理过程（需后端模型支持）。
 - **Markdown 支持**：完整渲染代码块、表格、列表和富文本格式。
 
-### 💬 会话管理
+### 会话管理
 - **多会话支持**：支持创建、重命名和删除多个聊天会话。
 - **历史记录持久化**：所有聊天记录自动保存到 `localStorage`，确保刷新页面后数据不丢失。
 - **自动命名**：根据首次交互内容智能生成会话标题（支持异步更新）。
 
-### 🎨 现代化 UI/UX
+### 现代化 UI/UX
 - **响应式设计**：移动端优先的优化，包含可折叠侧边栏和自适应布局。
 - **主题系统**：原生支持深色/浅色模式，并可跟随系统设置。
 - **组件库**：基于 `shadcn/ui` 和 Radix UI 构建，提供无障碍且高质量的组件。
 - **流畅动画**：消息气泡和界面元素拥有丝滑的过渡动画。
 
-## 🛠️ 技术栈
+## 技术栈
 
 - **框架**: React 19, TypeScript
 - **构建工具**: Vite 6
@@ -35,7 +35,7 @@
 - **图标**: Lucide React
 - **工具库**: `date-fns` (或 dayjs), `clsx`, `tailwind-merge`
 
-## 📁 项目结构
+## 项目结构
 
 ```bash
 src/
@@ -54,7 +54,7 @@ src/
 └── App.tsx             # 主应用入口
 ```
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 - Node.js >= 18.0.0
@@ -92,18 +92,8 @@ npm run build
 npm run preview
 ```
 
-## 🔌 集成
+## 集成
 
 本前端项目设计用于配合 **Chatbot Backend** 工作。请确保后端服务运行在 `http://localhost:8080`（默认端口），或根据需要在源代码中配置 API 端点。
 
-## 🤝 贡献说明
 
-1. Fork 本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
-
-## 📄 许可证
-
-基于 MIT 许可证分发。
