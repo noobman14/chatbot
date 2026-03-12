@@ -99,7 +99,6 @@ export function AccountSettings({ user, onUserUpdate }: AccountSettingsProps) {
     <div className="space-y-6">
       {/* 用户名修改区域 */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium">{t('account.changeName')}</h4>
         <div className="space-y-2">
           <Label htmlFor="name">{t('account.newName')}</Label>
           <Input
@@ -123,7 +122,6 @@ export function AccountSettings({ user, onUserUpdate }: AccountSettingsProps) {
 
       {/* 密码修改区域 */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium">{t('account.changePassword')}</h4>
         <div className="space-y-2">
           <Label htmlFor="oldPassword">{t('account.oldPassword')}</Label>
           <Input

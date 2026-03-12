@@ -474,7 +474,7 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
             }
           }}
           value={inputText}
-          className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0"
+          className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0 "
         />
         {editingMessage && (
           <Button

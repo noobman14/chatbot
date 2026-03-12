@@ -5,7 +5,7 @@
   margin: 0 auto;
   padding-top: 15px;
   padding-bottom: 15px;
-  min-height: 16vh;
+  min-height: 14vh;
 }
 
 .chat-input-container {
@@ -35,10 +35,13 @@
   flex-grow: 1;
   height: auto;
   min-height: 24px;
+  max-height: 120px;
+  /* 限制最大高度，约5行 */
+  overflow-y: auto;
+  /* 超出时显示滚动条 */
   text-align: left;
   background-color: transparent;
   transition: all 0.15s ease;
-  max-height: 200px;
   outline: none;
   border: none;
   margin-right: 12px;
