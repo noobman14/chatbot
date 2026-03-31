@@ -376,7 +376,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                                     <div className="bg-zinc-700/50 rounded-xl p-4">
                                         <h4 className="text-sm font-medium text-zinc-300 mb-4">最近 7 天活动</h4>
                                         <div className="h-48">
-                                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                                            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                                 <BarChart data={user.recentActivity}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                                                     <XAxis

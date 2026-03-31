@@ -1,15 +1,15 @@
-import { useAutoScroll } from './useAutoScroll';
+import { useAutoScroll } from '../../hooks/useAutoScroll';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
 
 
 import remarkGfm from 'remark-gfm';
-import RobotProfileImage from '../assets/robot.png';
-import UserProfileImage from '../assets/user.png';
+import RobotProfileImage from '../../assets/robot.png';
+import UserProfileImage from '../../assets/user.png';
 import './ChatMessages.css';
 import dayjs from 'dayjs';
-import LoadingImage from '../assets/loading-spinner.gif';
+import LoadingImage from '../../assets/loading-spinner.gif';
 import { cn } from '@/lib/utils';
 import {
   Collapsible,

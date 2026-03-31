@@ -1,5 +1,5 @@
 import { MessageSquarePlus, Trash2, MessageSquare } from "lucide-react"
-import type { ChatSession } from "../hooks/useChatSessions"
+import type { ChatSession } from "../../hooks/useChatSessions"
 import { NavUser } from "./nav-user"
 import {
   Sidebar,
@@ -16,7 +16,7 @@ import {
   SidebarMenuAction,
 } from "@/components/ui/sidebar"
 import { useTranslation } from 'react-i18next';
-import { ImageThumbnails, type ImageItem } from "./ImageThumbnails";
+import { ImageThumbnails, type ImageItem } from "../history/ImageThumbnails";
 
 // 定义组件属性接口
 interface AppSidebarProps {

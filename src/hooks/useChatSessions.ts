@@ -88,9 +88,17 @@ export function useChatSessions(user: { id: string } | null) {
         // 加载第一个会话的详情
         await loadSessionDetails(firstSessionId);
       } else {
-        // 如果没有会话，创建一个默认会话
-        setSessions([]);
-        setCurrentChatId('');
+        // 如果没有会话，自动创建一个默认会话
+        const createdData = await api.createSession();
+        const newSession: ChatSession = {
+          id: createdData.session.id,
+          title: createdData.session.title,
+          messages: [],
+          createdAt: createdData.session.createdAt,
+          updatedAt: createdData.session.updatedAt
+        };
+        setSessions([newSession]);
+        setCurrentChatId(newSession.id);
       }
     } catch (error) {
       console.error('Failed to load sessions:', error);

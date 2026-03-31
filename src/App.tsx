@@ -1,18 +1,18 @@
 import './App.css'
-import { ChatInput } from './components/ChatInput';
-import ChatMessages from './components/ChatMessages';
+import { ChatInput } from './components/chat/ChatInput';
+import ChatMessages from './components/chat/ChatMessages';
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { LoginPage } from './components/LoginPage';
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import { LoginPage } from './components/auth/LoginPage';
 import { AdminLoginPage, AdminDashboard } from './components/admin';
 import { useChatSessions } from './hooks/useChatSessions';
 import { useAuth } from './hooks/useAuth';
 import { useAdminAuth } from './hooks/useAdminAuth';
 import { ThemeProvider } from './components/theme-provider';
-import { Header } from './components/Header';
+import { Header } from './components/layout/Header';
 import { useState, useMemo, useEffect } from 'react';
 import { getHiddenMessagesForSession } from './utils/hiddenMessages';
-import { ImageHistory, type ImageItem } from './components/ImageHistory';
+import { ImageHistory, type ImageItem } from './components/history/ImageHistory';
 import { api } from './utils/api';
 
 /**

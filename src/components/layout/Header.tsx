@@ -1,6 +1,6 @@
-import { SidebarTrigger } from "./ui/sidebar";
-import { ModeToggle } from "./mode-toggle";
-import { LanguageSwitcher } from "./LanguageSwitcher";
+import { SidebarTrigger } from "../ui/sidebar";
+import { ModeToggle } from "../mode-toggle";
+import { LanguageSwitcher } from "../settings/LanguageSwitcher";
 
 export function Header() {
   return (<div className='header flex items-center justify-between'>

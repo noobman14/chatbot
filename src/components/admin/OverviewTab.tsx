@@ -125,7 +125,7 @@ export function OverviewTab({
                                 <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                 <AreaChart data={userGrowth}>
                                     <defs>
                                         <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
@@ -156,7 +156,7 @@ export function OverviewTab({
                                 <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                 <BarChart data={messageTrend}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                                     <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickFormatter={(v) => v.slice(5)} />
@@ -216,7 +216,7 @@ export function OverviewTab({
                                 <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                                 <BarChart data={hourlyActivity}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                                     <XAxis dataKey="hour" stroke="#71717a" fontSize={10} tickFormatter={(v) => `${v}时`} />

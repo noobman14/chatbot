@@ -31,8 +31,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { NotificationSettings } from './NotificationSettings';
-import { AccountSettings } from './AccountSettings';
+import { NotificationSettings } from '../settings/NotificationSettings';
+import { AccountSettings } from '../settings/AccountSettings';
 
 // NavUser 组件：显示在侧边栏底部的用户信息区域
 // 包含用户头像、姓名、邮箱，以及一个下拉菜单（用于登出、查看账户等）

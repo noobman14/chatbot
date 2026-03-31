@@ -9,7 +9,7 @@ export { AdminLoginPage } from './AdminLoginPage';
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/utils/api';
-import { UserDetailModal } from '../UserDetailModal';
+import { UserDetailModal } from './UserDetailModal';
 
 // 子组件
 import { AdminHeader } from './AdminHeader';
