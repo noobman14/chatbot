@@ -193,52 +193,130 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           return newMessages;
         });
       } else {
-        // 聊天模式：使用流式接口（支持多模态）
+        // =========================================================================
+        // 【流式输出渲染优化：打字机匀速特效核心机制】
+        // 传统的流式接收：后端返回什么速度、返回多少内容，前端就直接全量贴到面上。这会导致
+        // 网络快时出现大段文字瞬间“闪现”，网络抖动时又突然卡住，体验非常机械生硬。
+        //
+        // 优化方案：引入“消费队列”分离网络接收与UI渲染
+        // - 生产者（for await 循环）：负责以极度贪婪的模式快速把网络的字符“卸货”放入本地队列中，不再直接触碰界面渲染。
+        // - 消费者（outputInterval 定时器）：维持约 60 帧 (15ms) 的刷新频率，如抽丝剥茧般从队列头缓慢剥取字符更新 UI。
+        // =========================================================================
+
         let firstChunk = true;
+        
+        let streamingDone = false;                  // 标识服务器网络传输是否已经彻底结束
+        let contentQueue: string[] = [];            // 主气泡正式答案字符排队缓冲队列
+        let reasoningQueue: string[] = [];          // 深度思考折叠部分字符排队缓冲队列
 
-        for await (const chunk of api.streamMessage(currentChatId, {
-          content: text,
-          mode: mode,
-          image_data: imageData || undefined,
-          image_mime_type: imageMimeType || undefined
-        })) {
-          if (firstChunk) {
-            // 收到第一个 chunk 时，清除 "Loading...消息"
-            currentAiContent = "";
-            firstChunk = false;
+        // [消费者]：匀速输出定时器，类似游戏引擎渲染的主循环
+        const outputInterval = setInterval(() => {
+          // 若网络传输已完毕且所有缓存字符均渲染耗尽，则自动下线该匀速定时器
+          if (contentQueue.length === 0 && reasoningQueue.length === 0 && streamingDone) {
+            clearInterval(outputInterval);
+            return;
           }
 
-          if (chunk.type === 'thinking') {
-            currentReasoning += chunk.text;
-          } else if (chunk.type === 'content') {
-            currentAiContent += chunk.text;
-          } else if (chunk.type === 'error') {
-            // 收到服务端错误
-            currentAiContent = chunk.text;
+          let updated = false;
+
+          // 永远优先播放思考过程 (如果有缓存)，思考队列播放完毕后再接着播放正式回答
+          if (reasoningQueue.length > 0) {
+            // 【自适应弹性阻尼打字算法】
+            // 如果仅采用纯单字输出 (即恒定 ~66字/秒)，当遭遇千字以上的模型爆发返回时会导致队列被撑爆，显示严重滞后。
+            // 使用 Math.max(1, Math.floor(堆积长度 / 30)) 可以在排队过于拥挤时平滑提升字数动态提取量，
+            // 做到 "短句柔和细腻打字，长篇大论不卡顿始终紧跟进度" 的沉浸式体验。
+            const numChars = Math.max(1, Math.floor(reasoningQueue.length / 30));
+            currentReasoning += reasoningQueue.splice(0, numChars).join('');
+            updated = true;
+          } else if (contentQueue.length > 0) {
+            const numChars = Math.max(1, Math.floor(contentQueue.length / 30));
+            currentAiContent += contentQueue.splice(0, numChars).join('');
+            updated = true;
           }
 
-          // 实时更新 AI 消息内容
-          setChatMessages((prev: any[]) => {
-            const newMessages = [...prev];
-            const aiMsgIndex = newMessages.findIndex(msg => msg.id === newAiMsgId);
-            if (aiMsgIndex !== -1) {
-              newMessages[aiMsgIndex] = {
-                ...newMessages[aiMsgIndex],
-                message: {
-                  content: currentAiContent, // 如果还在思考，content 为空字符串(非Loading)
-                  reasoning_content: currentReasoning
-                }
-              };
+          // 如果本次时钟周期成功提取了新字符，则立即在 UI 回调中呈现
+          if (updated) {
+            setChatMessages((prev: any[]) => {
+              const newMessages = [...prev];
+              const aiMsgIndex = newMessages.findIndex(msg => msg.id === newAiMsgId);
+              if (aiMsgIndex !== -1) {
+                newMessages[aiMsgIndex] = {
+                  ...newMessages[aiMsgIndex],
+                  message: {
+                    content: currentAiContent, // 还在处于“深度思考”打字ing阶段时，content依然是空串，占位符已消除
+                    reasoning_content: currentReasoning
+                  }
+                };
+              }
+              return newMessages;
+            });
+          }
+        }, 15); // 每 15 毫秒高频刷新一帧
+
+        try {
+          // [生产者]：极速从后端拉取 SSE 流响应，并果断按字符解构成小颗粒推进队列缓冲池
+          for await (const chunk of api.streamMessage(currentChatId, {
+            content: text,
+            mode: mode,
+            image_data: imageData || undefined,
+            image_mime_type: imageMimeType || undefined
+          })) {
+            if (firstChunk) {
+              // 收到第一个真实有效的数据流包时，正式移除初始化预设的 "Loading..." 兜底提示
+              currentAiContent = "";
+              firstChunk = false;
             }
-            return newMessages;
+
+            // 强转为 string 防止 undefined 或者 fetch JSON 解析产生 any 对象引发后续 Array.from 异常
+            const chunkText = (chunk.text as string) || '';
+
+            if (chunk.type === 'thinking') {
+              // 通过 .push(...Array.from(...)) 特性注入单字符流：
+              // 这个原生特性能完美防范将复杂 Emoji 表情或变宽生僻字给错误按基础字符截断（JS特殊字符长占2个位点的问题）
+              reasoningQueue.push(...Array.from(chunkText));
+            } else if (chunk.type === 'content') {
+              contentQueue.push(...Array.from(chunkText));
+            } else if (chunk.type === 'error') {
+              // 收到服务端下发的标准错误解释，也照常送入主队列展示
+              contentQueue.push(...Array.from(chunkText));
+            }
+          }
+          
+          streamingDone = true; // 告知下游外部定时器：网络任务已圆满清盘
+          
+          // 【守护锁屏屏障】：哪怕 fetch 流结束，也必须死锁保护在这，等待上述缓存队列中最后一点残余字符被定时器悉数敲打完毕
+          // 只有两路完全合并打完，才肯正式让这整个 try-catch 块进入 finally（放开 setLoading 状态机按钮）
+          await new Promise<void>(resolve => {
+            const checkDone = setInterval(() => {
+              if (contentQueue.length === 0 && reasoningQueue.length === 0) {
+                clearInterval(checkDone);
+                resolve();
+              }
+            }, 50);
           });
+        } catch (streamError) {
+          streamingDone = true;
+          clearInterval(outputInterval); // 网络发生严重致命意外脱轨，立即掐断虚假的匀速输出定时器
+          
+          // 残留补偿动作：不要浪费网络幸苦下载但堵在排队里没来得及展示的内容包
+          // 直接化零为整全量暴力注入给内容变量，保证外层 catch 错误拦截组件能够渲染出这些断裂前的遗物信息
+          if (reasoningQueue.length > 0) {
+            currentReasoning += reasoningQueue.join('');
+            reasoningQueue = [];
+          }
+          if (contentQueue.length > 0) {
+            currentAiContent += contentQueue.join('');
+            contentQueue = [];
+          }
+          
+          throw streamError; // 再次向外抛出该错误，确保最外层的错误占位逻辑块正常执行显示
         }
       }
 
     } catch (error) {
       console.error('Failed to send message:', error);
       // 发生错误时，更新消息显示错误
-      // 如果已经接收到内容，说明流式传输成功，不显示错误（可能只是浏览器的 chunked encoding 误报）
+      // 如果已经接收到内容，说明流式传输成功，不显示错误
       // 只有在完全没有收到内容时才显示错误
       setChatMessages((prev: any[]) => {
         const newMessages = [...prev];
