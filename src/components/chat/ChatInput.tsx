@@ -301,7 +301,7 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           </div>
         </div>
       )}
-      <div className="chat-input-container">
+      <div className="chat-input-container flex-nowrap overflow-x-hidden gap-1 md:gap-2">
         <input
           type="file"
           ref={fileInputRef}
@@ -316,7 +316,7 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
           size="icon"
           onClick={handleImageButtonClick}
           disabled={Loading}
-          className="mr-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+          className="shrink-0 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
           title={t('chat.uploadImage')}
         >
           <ImagePlus size={20} />
@@ -344,13 +344,13 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
             }
           }}
           value={inputText}
-          className="chat-input min-h-0 border-0 shadow-none focus-visible:ring-0 "
+          className="chat-input flex-1 min-w-0 min-h-0 border-0 shadow-none focus-visible:ring-0 mr-1"
         />
         {editingMessage && (
           <Button
             onClick={() => { setInputText(''); onCancelEdit?.(); }}
             variant="ghost"
-            className="text-red-500 hover:text-red-700"
+            className="text-red-500 hover:text-red-700 shrink-0 px-2"
           >Cancel</Button>
         )}
 
@@ -364,11 +364,12 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
             className="polish-btn shrink-0"
             title={t('chat.polish')}
           >
-            <Sparkles size={16} className="mr-1" />
-            {polishing ? t('chat.polishing') : t('chat.polish')}
+            <Sparkles size={16} className="mr-1 hidden md:inline-block" />
+            <span className="hidden md:inline-block">{polishing ? t('chat.polishing') : t('chat.polish')}</span>
+            <span className="inline-block md:hidden">✨</span>
           </Button>
         )}
-        <NativeSelect onChange={handleSelectChange} className='shrink-0 w-max'>
+        <NativeSelect onChange={handleSelectChange} className='shrink-0 w-24 md:w-max max-w-28'>
           <NativeSelectOption value='disabled' className='shrink-0'>{t('mode.fast')}</NativeSelectOption>
           <NativeSelectOption value='enabled' className='shrink-0'>{t('mode.think')}</NativeSelectOption>
           <NativeSelectOption value='picture' className='shrink-0'>{t('mode.picture')}</NativeSelectOption>
@@ -376,9 +377,9 @@ export function ChatInput({ currentChatId, setChatMessages, editingMessage, onCa
         <Button
           disabled={Loading}
           onClick={sendMessage}
-          className="send-button ml-3"
+          className="send-button shrink-0 px-3 md:px-4"
         >{editingMessage ? t('chat.resend') : t('chat.send')}</Button>
-      </div ></div>
+      </div></div>
 
   );
 }

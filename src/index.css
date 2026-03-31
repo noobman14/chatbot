@@ -132,6 +132,16 @@
   /* 关键：防止 padding 撑大元素宽度 */
 }
 
+html {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;
