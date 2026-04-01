@@ -15,8 +15,8 @@ import { useChatSessions } from '@/hooks/useChatSessions';
 import { useAuth } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Header } from '@/components/layout/Header';
-import { useState, useMemo, useEffect } from 'react';
-import { getHiddenMessagesForSession } from '@/utils/hiddenMessages';
+import { useState, useEffect } from 'react';
+
 import { ImageHistory, type ImageItem } from '@/components/history/ImageHistory';
 import { api } from '@/utils/api';
 
@@ -27,24 +27,13 @@ export default function ChatRoute() {
   const {
     sessions,
     currentChatId,
-    currentMessages,
     createNewChat,
     switchChat,
     deleteChat,
-    setChatMessages,
-    refreshMessages
   } = useChatSessions(user);
 
   // 编辑状态：存储正在编辑的消息 ID 和内容
   const [editingMessage, setEditingMessage] = useState<{ id: string | number; content: string } | null>(null);
-
-  // 过滤掉隐藏的消息
-  const visibleMessages = useMemo(() => {
-    if (!currentChatId) return currentMessages;
-    const hiddenIds = getHiddenMessagesForSession(currentChatId);
-    return currentMessages.filter(msg => !hiddenIds.includes(msg.id.toString()));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMessages, currentChatId]);
 
   // 历史图片状态和视图模式
   const [historyImages, setHistoryImages] = useState<ImageItem[]>([]);
@@ -99,7 +88,7 @@ export default function ChatRoute() {
           {/* 左侧侧边栏 */}
           <AppSidebar
             sessions={sessions}
-            currentChatId={currentChatId}
+            currentChatId={currentChatId || ''}
             onNewChat={createNewChat}
             onSwitchChat={switchChat}
             onDeleteChat={deleteChat}
@@ -117,7 +106,6 @@ export default function ChatRoute() {
               <>
                 {/* 消息展示组件 */}
                 <ChatMessages
-                  chatMessages={visibleMessages}
                   userAvatar={user.avatar}
                   onStartEdit={(id: string | number, content: string) => {
                     setEditingMessage({ id, content });
@@ -125,12 +113,8 @@ export default function ChatRoute() {
                 />
                 {/* 输入框组件 */}
                 <ChatInput
-                  currentChatId={currentChatId}
-                  chatMessages={currentMessages}
-                  setChatMessages={setChatMessages}
                   editingMessage={editingMessage}
                   onCancelEdit={() => setEditingMessage(null)}
-                  refreshMessages={refreshMessages}
                 />
               </>
             ) : (
