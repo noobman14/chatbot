@@ -13,6 +13,7 @@
 import './App.css'
 import { Routes, Route } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
+import { UnauthorizedListener } from '@/components/UnauthorizedListener'
 
 // ============ 懒加载页面组件（代码分割） ============
 // 每个 lazy() 调用会生成一个独立的 JS chunk，访问对应路由时才会加载
@@ -36,6 +37,7 @@ export function App() {
   return (
     // Suspense 包裹懒加载组件，提供加载中的 fallback UI
     <Suspense fallback={<PageLoading />}>
+      <UnauthorizedListener />
       <Routes>
         {/* 登录/注册页面 - 独立路由，无侧边栏 */}
         <Route path="/login" element={<LoginRoute />} />

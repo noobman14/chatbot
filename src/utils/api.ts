@@ -4,6 +4,8 @@
  * 封装所有后端 API 接口调用
  */
 
+import { triggerUnauthorized } from '@/utils/authSession';
+
 // API 基础 URL
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -26,11 +28,8 @@ function getHeaders(): HeadersInit {
 async function handleResponse<T>(response: Response, skipAuthRedirect: boolean = false): Promise<T> {
   // 401 表示 Token 无效或过期
   if (response.status === 401) {
-    // 如果不跳过认证重定向，则清除本地数据并刷新页面
     if (!skipAuthRedirect) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.reload();
+      triggerUnauthorized();
     }
     throw new Error('Unauthorized');
   }
@@ -326,9 +325,7 @@ export const api = {
     });
 
     if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.reload();
+      triggerUnauthorized();
       throw new Error('Unauthorized');
     }
 

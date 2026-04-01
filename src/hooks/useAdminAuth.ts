@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/utils/api';
+import { UNAUTHORIZED_EVENT } from '@/utils/authSession';
 
 export interface Admin {
     id: string;
@@ -21,6 +22,12 @@ export function useAdminAuth() {
     });
 
     const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const onUnauthorized = () => setAdmin(null);
+        window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+        return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    }, []);
 
     // 初始化时验证管理员 Token
     useEffect(() => {

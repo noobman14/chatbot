@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/utils/api';
+import { UNAUTHORIZED_EVENT } from '@/utils/authSession';
 
 export interface User {
   id: string;
@@ -24,6 +25,13 @@ export function useAuth() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+
+  // 全局 401：同步清空内存中的 user（本地存储已由 api 层清理）
+  useEffect(() => {
+    const onUnauthorized = () => setUser(null);
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+  }, []);
 
   // 初始化时验证 Token
   useEffect(() => {
