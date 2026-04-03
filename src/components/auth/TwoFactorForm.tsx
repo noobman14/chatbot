@@ -5,8 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+import { api } from '@/utils/api';
 
 interface TwoFactorFormProps {
   email: string;
@@ -35,27 +34,17 @@ export function TwoFactorForm({ email, initialCountdown, onVerifySuccess, onBack
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify-2fa`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: verificationCode }),
+      const { user } = await api.verifyTwoFactor({
+        email,
+        code: verificationCode,
       });
 
-      const result = await response.json();
+      localStorage.setItem('user', JSON.stringify(user));
 
-      if (!response.ok) {
-        throw new Error(result.message || t('login.verifyFailed'));
-      }
-
-      if (result.data?.token && result.data?.user) {
-        localStorage.setItem('token', result.data.token);
-        localStorage.setItem('user', JSON.stringify(result.data.user));
-
-        if (onVerifySuccess) {
-          onVerifySuccess(result.data.user, result.data.token);
-        } else {
-          window.location.reload();
-        }
+      if (onVerifySuccess) {
+        onVerifySuccess(user, '');
+      } else {
+        window.location.reload();
       }
     } catch (err: any) {
       setError(err.message || t('login.verifyFailed'));
@@ -71,18 +60,9 @@ export function TwoFactorForm({ email, initialCountdown, onVerifySuccess, onBack
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/resend-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const result = await response.json();
-
-      if (result.data?.success) {
-        setCountdown(60);
-      } else if (result.data?.wait_seconds) {
-        setCountdown(result.data.wait_seconds);
+      const next = await api.resendTwoFactorCode({ email });
+      if (next) {
+        setCountdown(next.nextCountdown);
       }
     } catch (err: any) {
       setError(err.message || t('login.loginFailed'));

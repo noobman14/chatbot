@@ -99,8 +99,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   loadSessions: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!localStorage.getItem('user')) {
       get().clearStore();
       return;
     }

@@ -6,18 +6,59 @@
 
 import { triggerUnauthorized } from '@/utils/authSession';
 
-// API 基础 URL
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const DEFAULT_API_BASE = 'http://localhost:8080/api/v1';
+
+/** 供少数需在 fetch 之外拼 URL 的场景使用（如登出清 Cookie） */
+export function getApiBaseUrl(): string {
+  const v = import.meta.env.VITE_API_BASE_URL;
+  if (typeof v === 'string' && v.trim()) {
+    return v.replace(/\/$/, '');
+  }
+  return DEFAULT_API_BASE;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
+
+/** 后端业务成功码：常见为 200，亦有项目统一用 0 */
+function isApiSuccessCode(code: unknown): boolean {
+  return code === 200 || code === 0;
+}
 
 /**
- * 获取请求头，自动添加 Token
+ * 登录/2FA 等无 Token 的 JSON 请求，解析响应体（不触发 401 全局登出逻辑）
+ */
+async function fetchAuthJson(path: string, init: RequestInit): Promise<{ response: Response; body: any }> {
+  const response = await apiFetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    credentials: 'include',
+  });
+  const text = await response.text();
+  if (!text) {
+    throw new Error('服务器返回空响应，请确保后端服务已启动');
+  }
+  let body: any;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error('服务器响应格式错误');
+  }
+  return { response, body };
+}
+
+/**
+ * JSON 请求头。用户 JWT 由后端 HttpOnly Cookie 携带，需配合 {@link apiFetch} 的 credentials。
  */
 function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
+}
+
+function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, {
+    credentials: 'include',
+    ...init,
+  });
 }
 
 /**
@@ -48,8 +89,7 @@ async function handleResponse<T>(response: Response, skipAuthRedirect: boolean =
     throw new Error('服务器响应格式错误');
   }
 
-  // 后端返回的业务状态码不是 200，抛出错误
-  if (data.code !== 200) {
+  if (!isApiSuccessCode(data.code)) {
     throw new Error(data.message || 'Request failed');
   }
 
@@ -64,7 +104,7 @@ export const api = {
    * 用户注册
    */
   async register(params: { name: string; email: string; password: string }) {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await apiFetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(params)
@@ -78,7 +118,7 @@ export const api = {
         avatar: string;
         createdAt: number;
       };
-      token: string;
+      token?: string;
     }>(response, true);
   },
 
@@ -86,7 +126,7 @@ export const api = {
    * 用户登录
    */
   async login(params: { email: string; password: string }) {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await apiFetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(params)
@@ -100,15 +140,105 @@ export const api = {
         avatar: string;
         createdAt: number;
       };
-      token: string;
+      token?: string;
     }>(response, true);
   },
 
   /**
-   * 验证 Token
+   * 登录第一步（支持 2FA 分支），供登录页使用；不走 handleResponse，以便解析 requires_2fa。
    */
-  async verifyToken() {
-    const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+  async loginInit(params: { email: string; password: string }): Promise<
+    | {
+        status: 'session';
+        user: {
+          id: string;
+          name: string;
+          email: string;
+          avatar: string;
+          createdAt: number;
+        };
+        token?: string;
+      }
+    | { status: '2fa'; initialCountdown: number }
+  > {
+    const { response, body } = await fetchAuthJson('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      throw new Error(body.message || 'Request failed');
+    }
+    if (body.code !== undefined && !isApiSuccessCode(body.code)) {
+      throw new Error(body.message || 'Request failed');
+    }
+    const data = body.data;
+    if (data?.requires_2fa) {
+      const initialCountdown = data.code_sent ? 60 : (data.wait_seconds || 0);
+      return { status: '2fa', initialCountdown };
+    }
+    if (data?.user) {
+      return { status: 'session', user: data.user, token: (data.token as string) ?? '' };
+    }
+    throw new Error(body.message || 'Request failed');
+  },
+
+  /**
+   * 2FA 验证码校验
+   */
+  async verifyTwoFactor(params: { email: string; code: string }): Promise<{
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      avatar: string;
+      createdAt: number;
+    };
+    token?: string;
+  }> {
+    const { response, body } = await fetchAuthJson('/auth/verify-2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      throw new Error(body.message || 'Request failed');
+    }
+    if (body.code !== undefined && !isApiSuccessCode(body.code)) {
+      throw new Error(body.message || 'Request failed');
+    }
+    const data = body.data;
+    if (data?.user) {
+      return { user: data.user, token: (data.token as string) ?? '' };
+    }
+    throw new Error(body.message || 'Request failed');
+  },
+
+  /**
+   * 重新发送 2FA 验证码；返回 null 表示响应中无可用倒计时字段（网络/解析错误会向外抛出）
+   */
+  async resendTwoFactorCode(params: { email: string }): Promise<{ nextCountdown: number } | null> {
+    const { body } = await fetchAuthJson('/auth/resend-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const data = body.data;
+    if (data?.success) {
+      return { nextCountdown: 60 };
+    }
+    if (data?.wait_seconds != null) {
+      return { nextCountdown: data.wait_seconds };
+    }
+    return null;
+  },
+
+  /**
+   * 验证会话（Cookie 中的 JWT）
+   * @param silent401 为 true 时不触发全局登出（用于首屏检测是否已登录）
+   */
+  async verifyToken(silent401 = false) {
+    const response = await apiFetch(`${API_BASE_URL}/auth/verify`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -120,14 +250,14 @@ export const api = {
         avatar: string;
         createdAt: number;
       };
-    }>(response);
+    }>(response, silent401);
   },
 
   /**
    * 用户登出
    */
   async logout() {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    const response = await apiFetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
       headers: getHeaders()
     });
@@ -138,7 +268,7 @@ export const api = {
    * 获取会话列表
    */
   async getSessions(page: number = 1, pageSize: number = 20) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions?page=${page}&pageSize=${pageSize}`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions?page=${page}&pageSize=${pageSize}`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -160,7 +290,7 @@ export const api = {
    * 创建新会话
    */
   async createSession(title?: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ title })
@@ -180,7 +310,7 @@ export const api = {
    * 获取会话详情
    */
   async getSession(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -209,7 +339,7 @@ export const api = {
    * 删除会话
    */
   async deleteSession(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -220,7 +350,7 @@ export const api = {
    * 更新会话标题
    */
   async updateSessionTitle(sessionId: string, title: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
       method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify({ title })
@@ -238,7 +368,7 @@ export const api = {
    * 发送消息并获取 AI 回复
    */
   async sendMessage(sessionId: string, params: { content: string; mode: string; image_data?: string; image_mime_type?: string }) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(params)
@@ -269,7 +399,7 @@ export const api = {
    * 修改消息
    */
   async updateMessage(sessionId: string, messageId: string, content: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify({ content })
@@ -281,7 +411,7 @@ export const api = {
    * 删除消息
    */
   async deleteMessage(sessionId: string, messageId: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -292,7 +422,7 @@ export const api = {
    * 删除指定消息及之后的所有消息
    */
   async deleteMessagesAfter(sessionId: string, messageId: string) {
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}/after`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/${messageId}/after`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -314,7 +444,7 @@ export const api = {
       imageMimeType: params.image_mime_type
     };
 
-    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {
+    const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {
       method: 'POST',
       headers: {
         ...getHeaders(),
@@ -408,7 +538,7 @@ export const api = {
    * 获取用户信息
    */
   async getUserProfile() {
-    const response = await fetch(`${API_BASE_URL}/user/profile`, {
+    const response = await apiFetch(`${API_BASE_URL}/user/profile`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -429,7 +559,7 @@ export const api = {
    * 管理员登录
    */
   async adminLogin(params: { email: string; password: string }) {
-    const response = await fetch(`${API_BASE_URL}/admin/login`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/login`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(params)
@@ -441,7 +571,7 @@ export const api = {
         name: string;
         role: string;
       };
-      token: string;
+      token?: string;
     }>(response);
   },
 
@@ -449,7 +579,7 @@ export const api = {
    * 更新用户信息
    */
   async updateProfile(params: { name?: string; avatar?: string }) {
-    const response = await fetch(`${API_BASE_URL}/user/profile`, {
+    const response = await apiFetch(`${API_BASE_URL}/user/profile`, {
       method: 'PATCH',
       headers: getHeaders(),
       body: JSON.stringify(params)
@@ -469,7 +599,7 @@ export const api = {
    * 修改密码
    */
   async changePassword(params: { oldPassword: string; newPassword: string }) {
-    const response = await fetch(`${API_BASE_URL}/user/change-password`, {
+    const response = await apiFetch(`${API_BASE_URL}/user/change-password`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(params)
@@ -487,7 +617,7 @@ export const api = {
       ? `${API_BASE_URL}/images?limit=${limit}`
       : `${API_BASE_URL}/images`;
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -506,7 +636,7 @@ export const api = {
     if (keyword) {
       url += `&keyword=${encodeURIComponent(keyword)}`;
     }
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -533,7 +663,7 @@ export const api = {
    * 封禁用户（管理员）
    */
   async banUser(userId: string, days?: number) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/ban${days ? `?days=${days}` : ''}`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/${userId}/ban${days ? `?days=${days}` : ''}`, {
       method: 'POST',
       headers: getHeaders()
     });
@@ -544,7 +674,7 @@ export const api = {
    * 解封用户（管理员）
    */
   async unbanUser(userId: string) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/unban`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/${userId}/unban`, {
       method: 'POST',
       headers: getHeaders()
     });
@@ -555,7 +685,7 @@ export const api = {
    * 删除用户（管理员）
    */
   async deleteUser(userId: string) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/${userId}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -566,7 +696,7 @@ export const api = {
    * 批量封禁用户
    */
   async batchBanUsers(userIds: string[]) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/batch-ban`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/batch-ban`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(userIds)
@@ -578,7 +708,7 @@ export const api = {
    * 批量解封用户
    */
   async batchUnbanUsers(userIds: string[]) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/batch-unban`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/batch-unban`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(userIds)
@@ -590,7 +720,7 @@ export const api = {
    * 批量删除用户
    */
   async batchDeleteUsers(userIds: string[]) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/batch-delete`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/batch-delete`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(userIds)
@@ -602,7 +732,7 @@ export const api = {
    * 删除消息（管理员）
    */
   async adminDeleteMessage(messageId: string) {
-    const response = await fetch(`${API_BASE_URL}/admin/messages/${messageId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/messages/${messageId}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -613,7 +743,7 @@ export const api = {
    * 获取操作日志
    */
   async getAdminOperationLogs(page: number, pageSize: number) {
-    const response = await fetch(`${API_BASE_URL}/admin/logs/operations?page=${page}&limit=${pageSize}`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/logs/operations?page=${page}&limit=${pageSize}`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -627,7 +757,7 @@ export const api = {
    * 获取登录日志
    */
   async getLoginLogs(page: number, pageSize: number) {
-    const response = await fetch(`${API_BASE_URL}/admin/logs/logins?page=${page}&limit=${pageSize}`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/logs/logins?page=${page}&limit=${pageSize}`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -643,7 +773,7 @@ export const api = {
    * 获取总览统计
    */
   async getOverviewStats() {
-    const response = await fetch(`${API_BASE_URL}/admin/statistics/overview`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/statistics/overview`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -660,7 +790,7 @@ export const api = {
    * 获取用户增长趋势
    */
   async getUserGrowth() {
-    const response = await fetch(`${API_BASE_URL}/admin/statistics/user-growth`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/statistics/user-growth`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -671,7 +801,7 @@ export const api = {
    * 获取消息趋势
    */
   async getMessageTrend() {
-    const response = await fetch(`${API_BASE_URL}/admin/statistics/message-trend`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/statistics/message-trend`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -682,7 +812,7 @@ export const api = {
    * 获取活跃用户排行
    */
   async getActiveRanking(limit: number = 10) {
-    const response = await fetch(`${API_BASE_URL}/admin/statistics/active-ranking?limit=${limit}`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/statistics/active-ranking?limit=${limit}`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -700,7 +830,7 @@ export const api = {
    * 获取24小时活动分布
    */
   async getHourlyActivity() {
-    const response = await fetch(`${API_BASE_URL}/admin/statistics/hourly-activity`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/statistics/hourly-activity`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -711,7 +841,7 @@ export const api = {
    * 获取用户详细统计
    */
   async getUserDetail(userId: string) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/detail`, {
+    const response = await apiFetch(`${API_BASE_URL}/admin/users/${userId}/detail`, {
       method: 'GET',
       headers: getHeaders()
     });
@@ -750,7 +880,7 @@ export const api = {
    * @returns 润色后的文本
    */
   async polishPrompt(text: string): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/ai/polish`, {
+    const response = await apiFetch(`${API_BASE_URL}/ai/polish`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ text })

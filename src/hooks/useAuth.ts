@@ -33,28 +33,44 @@ export function useAuth() {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, []);
 
-  // 初始化时验证 Token
+  // 初始化：仅当 localStorage 有用户数据时才验证 Cookie 中的 JWT
+  // 如果从未登录过（localStorage 无 user），跳过请求，避免控制台出现 401 错误
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // 验证 Token 有效性
-      api.verifyToken()
-        .then(data => {
-          setUser(data.user);
-          localStorage.setItem('user', JSON.stringify(data.user));
-        })
-        .catch(() => {
-          // Token 无效，清除本地数据
-          localStorage.removeItem('token');
+    const savedUser = localStorage.getItem('user');
+    // 未登录过，无需验证，直接结束加载
+    if (!savedUser || savedUser === 'undefined' || savedUser === 'null') {
+      setIsLoading(false);
+      return;
+    }
+
+    // 有残留用户数据，说明之前登录过，验证 Cookie 是否仍有效
+    api.verifyToken(true)
+      .then(data => {
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg === 'Unauthorized') {
+          // Token 已失效，清除本地数据
           localStorage.removeItem('user');
           setUser(null);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
-    }
+        } else {
+          // 网络错误等，保留本地缓存的用户数据
+          try {
+            if (savedUser) {
+              setUser(JSON.parse(savedUser));
+            } else {
+              setUser(null);
+            }
+          } catch {
+            setUser(null);
+          }
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   /**
@@ -63,7 +79,6 @@ export function useAuth() {
   const register = async (name: string, email: string, password: string) => {
     const data = await api.register({ name, email, password });
     setUser(data.user);
-    localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
   };
 
@@ -73,7 +88,6 @@ export function useAuth() {
   const login = async (email: string, password: string) => {
     const data = await api.login({ email, password });
     setUser(data.user);
-    localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
   };
 
@@ -87,8 +101,6 @@ export function useAuth() {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      // 清除所有用户相关的本地存储数据
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('chatSessions');
     }

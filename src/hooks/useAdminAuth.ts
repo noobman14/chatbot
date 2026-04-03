@@ -29,19 +29,17 @@ export function useAdminAuth() {
         return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
     }, []);
 
-    // 初始化时验证管理员 Token
     useEffect(() => {
-        const adminToken = localStorage.getItem('adminToken');
         const savedAdmin = localStorage.getItem('admin');
-
-        if (adminToken && savedAdmin) {
-            // 确保 token key 使用管理员 token
-            localStorage.setItem('token', adminToken);
-            setAdmin(JSON.parse(savedAdmin));
+        if (savedAdmin) {
+            try {
+                setAdmin(JSON.parse(savedAdmin));
+            } catch {
+                localStorage.removeItem('admin');
+                setAdmin(null);
+            }
         } else {
             setAdmin(null);
-            // 清理可能残留的token
-            localStorage.removeItem('token');
         }
         setIsLoading(false);
     }, []);
@@ -52,10 +50,7 @@ export function useAdminAuth() {
     const login = async (email: string, password: string) => {
         const data = await api.adminLogin({ email, password });
         setAdmin(data.admin);
-        localStorage.setItem('adminToken', data.token);
         localStorage.setItem('admin', JSON.stringify(data.admin));
-        // 同时设置 token，因为 API 调用使用的是通用的 token key
-        localStorage.setItem('token', data.token);
     };
 
     /**
@@ -68,9 +63,7 @@ export function useAdminAuth() {
             console.error('Admin logout error:', error);
         } finally {
             setAdmin(null);
-            localStorage.removeItem('adminToken');
             localStorage.removeItem('admin');
-            localStorage.removeItem('token');
         }
     };
 

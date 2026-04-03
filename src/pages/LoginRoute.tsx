@@ -27,10 +27,9 @@ export default function LoginRoute() {
     return <Navigate to="/" replace />;
   }
 
-  // 登录成功后导航到主页并刷新用户状态
+  // 登录成功后进入主页（凭证已由 LoginForm / TwoFactorForm 写入 localStorage）
   const handleLoginSuccess = () => {
-    navigate('/');
-    window.location.reload();
+    navigate('/', { replace: true });
   };
 
   return (

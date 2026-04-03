@@ -39,6 +39,14 @@ interface UseChatStreamOptions {
   onCancelEdit?: () => void;
 }
 
+/** 流式阶段写入全局 store 的间隔（ms）。约 13 次/秒，显著低于 ~30ms 档，减轻 Markdown 重渲染压力。 */
+const STREAM_UI_TICK_MS = 75;
+/**
+ * 积压队列越长，每 tick 多吐字符，避免落后网络太多。
+ * 与 STREAM_UI_TICK_MS 配套：tick 变大时除数略小，保持相近的“追平”速度。
+ */
+const STREAM_BACKLOG_DIVISOR = 12;
+
 // ─────────────────────────────────────────────
 // Hook 实现
 // ─────────────────────────────────────────────
@@ -145,12 +153,8 @@ export function useChatStream({
         });
       } else {
         // ============================================================
-        // 【流式输出渲染优化：打字机匀速特效核心机制】
-        //
-        // 生产者（for await 循环）：贪婪地从网络"卸货"字符到本地队列
-        // 消费者（outputInterval 定时器）：以 ~60fps 匀速从队列头取字符更新 UI
-        //
-        // 优势：网络突发时不会"闪现"大段文字；网络抖动时也不会突然卡顿
+        // 流式输出：生产者尽快入队，消费者按 STREAM_UI_TICK_MS 节奏写入 store，
+        // 避免 ~30ms 档对整条消息列表 + Markdown 的过高重绘频率。
         // ============================================================
 
         let firstChunk = true;
@@ -160,7 +164,7 @@ export function useChatStream({
         let contentQueue: string[] = [];
         let reasoningQueue: string[] = [];
 
-        // ─── 消费者：以固定帧率匀速渲染 UI ─────────────────────────
+        // ─── 消费者：按 STREAM_UI_TICK_MS 节奏写入 store ───────────
         const outputInterval = setInterval(() => {
           // 队列耗尽且网络传输完毕 → 退出定时器
           if (contentQueue.length === 0 && reasoningQueue.length === 0 && streamingDone) {
@@ -172,17 +176,16 @@ export function useChatStream({
 
           // 永远优先播放"思考过程"，思考队列耗尽后再播放"正式回答"
           if (reasoningQueue.length > 0) {
-            // 【自适应弹性阻尼算法】：队列越长每帧多吐几个字符，避免严重滞后
-            const numChars = Math.max(1, Math.floor(reasoningQueue.length / 30));
+            const numChars = Math.max(1, Math.floor(reasoningQueue.length / STREAM_BACKLOG_DIVISOR));
             currentReasoning += reasoningQueue.splice(0, numChars).join('');
             updated = true;
           } else if (contentQueue.length > 0) {
-            const numChars = Math.max(1, Math.floor(contentQueue.length / 30));
+            const numChars = Math.max(1, Math.floor(contentQueue.length / STREAM_BACKLOG_DIVISOR));
             currentAiContent += contentQueue.splice(0, numChars).join('');
             updated = true;
           }
 
-          // 本帧有新字符 → 刷新 UI
+          // 本 tick 有新字符 → 刷新 UI
           if (updated) {
             setChatMessages((prev: ChatMessage[]) => {
               const newMessages = [...prev];
@@ -196,10 +199,10 @@ export function useChatStream({
               return newMessages;
             });
           }
-        }, 15); // 每 15ms 高频刷新一帧（约 66fps）
+        }, STREAM_UI_TICK_MS);
 
         try {
-          // ─── 生产者：从后端极速拉取 SSE 流 ───────────────────────
+          // ─── 生产者：从后端拉取 SSE 流 ───────────────────────
           for await (const chunk of api.streamMessage(currentChatId, {
             content: text,
             mode,

@@ -5,8 +5,7 @@ import { Label } from '@/components/ui/label';
 import { CardContent, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+import { api } from '@/utils/api';
 
 interface LoginFormProps {
   onLoginSuccess?: (user: any, token: string) => void;
@@ -26,27 +25,15 @@ export function LoginForm({ onLoginSuccess, onRequires2FA }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const result = await api.loginInit({ email, password });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || t('login.loginFailed'));
-      }
-
-      if (result.data?.requires_2fa) {
-        const initialCountdown = result.data.code_sent ? 60 : (result.data.wait_seconds || 0);
-        onRequires2FA(email, initialCountdown);
-      } else if (result.data?.token && result.data?.user) {
-        localStorage.setItem('token', result.data.token);
-        localStorage.setItem('user', JSON.stringify(result.data.user));
+      if (result.status === '2fa') {
+        onRequires2FA(email, result.initialCountdown);
+      } else {
+        localStorage.setItem('user', JSON.stringify(result.user));
 
         if (onLoginSuccess) {
-          onLoginSuccess(result.data.user, result.data.token);
+          onLoginSuccess(result.user, result.token ?? '');
         } else {
           window.location.reload();
         }
