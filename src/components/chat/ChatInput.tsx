@@ -40,6 +40,7 @@ export function ChatInput({
   const { t } = useTranslation();
   const [inputText, setInputText] = useState('');
   const [mode, setMode] = useState('disabled');
+  const [model, setModel] = useState('');
   const [polishing, setPolishing] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -116,7 +117,7 @@ export function ChatInput({
     setInputText('');
     removeImage();
 
-    await sendStream(text, imageData, imageMimeType, currentImagePreview, mode);
+    await sendStream(text, imageData, imageMimeType, currentImagePreview, mode, model);
   }
 
   return (
@@ -171,8 +172,8 @@ export function ChatInput({
             Loading
               ? t('common.loading')
               : editingMessage
-              ? t('chat.editingMessage')
-              : t('chat.inputPlaceholder')
+                ? t('chat.editingMessage')
+                : t('chat.inputPlaceholder')
           }
           disabled={Loading}
           onChange={saveInputText}
@@ -226,6 +227,18 @@ export function ChatInput({
           <NativeSelectOption value='disabled' className='shrink-0'>{t('mode.fast')}</NativeSelectOption>
           <NativeSelectOption value='enabled' className='shrink-0'>{t('mode.think')}</NativeSelectOption>
           <NativeSelectOption value='picture' className='shrink-0'>{t('mode.picture')}</NativeSelectOption>
+        </NativeSelect>
+
+        {/* 模型选择器 */}
+        <NativeSelect
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          className='shrink-0 w-32 md:w-max max-w-40'
+          title="选择 AI 模型"
+        >
+          <NativeSelectOption value='' className='shrink-0'>默认模型</NativeSelectOption>
+          <NativeSelectOption value='doubao-seed-1-6-lite-251015' className='shrink-0'>豆包 Lite</NativeSelectOption>
+          <NativeSelectOption value='doubao-seed-2-0-pro-260215' className='shrink-0'>豆包 Pro</NativeSelectOption>
         </NativeSelect>
 
         {/* 发送按钮 */}

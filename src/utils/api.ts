@@ -6,7 +6,7 @@
 
 import { triggerUnauthorized } from '@/utils/authSession';
 
-const DEFAULT_API_BASE = 'http://localhost:8080/api/v1';
+const DEFAULT_API_BASE = '/api/v1';
 
 /** 供少数需在 fetch 之外拼 URL 的场景使用（如登出清 Cookie） */
 export function getApiBaseUrl(): string {
@@ -33,6 +33,7 @@ async function fetchAuthJson(path: string, init: RequestInit): Promise<{ respons
     credentials: 'include',
   });
   const text = await response.text();
+  console.log(`Response from ${path}:`, text);
   if (!text) {
     throw new Error('服务器返回空响应，请确保后端服务已启动');
   }
@@ -149,16 +150,16 @@ export const api = {
    */
   async loginInit(params: { email: string; password: string }): Promise<
     | {
-        status: 'session';
-        user: {
-          id: string;
-          name: string;
-          email: string;
-          avatar: string;
-          createdAt: number;
-        };
-        token?: string;
-      }
+      status: 'session';
+      user: {
+        id: string;
+        name: string;
+        email: string;
+        avatar: string;
+        createdAt: number;
+      };
+      token?: string;
+    }
     | { status: '2fa'; initialCountdown: number }
   > {
     const { response, body } = await fetchAuthJson('/auth/login', {
@@ -367,7 +368,7 @@ export const api = {
   /**
    * 发送消息并获取 AI 回复
    */
-  async sendMessage(sessionId: string, params: { content: string; mode: string; image_data?: string; image_mime_type?: string }) {
+  async sendMessage(sessionId: string, params: { content: string; mode: string; image_data?: string; image_mime_type?: string; model?: string }) {
     const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages`, {
       method: 'POST',
       headers: getHeaders(),
@@ -434,14 +435,15 @@ export const api = {
    * 使用 Server- Sent Events (SSE) 格式
    * 支持多模态（图片+文本）
    */
-  async * streamMessage(sessionId: string, params: { content: string; mode: string, messageId?: string, image_data?: string, image_mime_type?: string }) {
+  async * streamMessage(sessionId: string, params: { content: string; mode: string, messageId?: string, image_data?: string, image_mime_type?: string, model?: string }) {
     // 构造符合后端 DTO 的请求体
     const requestBody = {
       content: params.content,
       mode: params.mode,
       messageId: params.messageId,
       imageData: params.image_data,
-      imageMimeType: params.image_mime_type
+      imageMimeType: params.image_mime_type,
+      model: params.model
     };
 
     const response = await apiFetch(`${API_BASE_URL}/chat/sessions/${sessionId}/messages/stream`, {

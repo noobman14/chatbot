@@ -67,13 +67,15 @@ export function useChatStream({
    * @param imageMimeType  图片 MIME 类型（可选）
    * @param imagePreview   图片预览 URL，用于乐观更新展示（可选）
    * @param mode           对话模式：'disabled' | 'enabled' | 'picture'
+   * @param model          模型名称（可选，为空时使用默认模型）
    */
   async function sendMessage(
     text: string,
     imageData: string | null,
     imageMimeType: string | null,
     imagePreview: string | null,
-    mode: string
+    mode: string,
+    model?: string
   ) {
     // 前置校验：无会话、空输入或当前正在加载时，直接拒绝
     if (!currentChatId || !text.trim() || loading) return;
@@ -134,6 +136,7 @@ export function useChatStream({
           mode,
           image_data: imageData || undefined,
           image_mime_type: imageMimeType || undefined,
+          model: model || undefined,
         });
 
         currentAiContent = result.aiMessage.message.content;
@@ -208,6 +211,7 @@ export function useChatStream({
             mode,
             image_data: imageData || undefined,
             image_mime_type: imageMimeType || undefined,
+            model: model || undefined,
           })) {
             if (firstChunk) {
               // 收到第一个真实数据包时，清除 "Loading..." 占位字符串

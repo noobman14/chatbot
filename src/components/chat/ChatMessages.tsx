@@ -4,12 +4,11 @@
  * 职责（重构后）：
  *  - 渲染消息列表，负责消息气泡布局、头像、时间戳、编辑/复制操作按钮
  *  - 所有 Markdown 渲染逻辑已提取到 MarkdownRenderer 组件，本文件只调用它
- *
- * 重构前文件长达 447 行，顶部硬编码了 50+ 行的语言注册和两个大型组件。
- * 重构后本文件约 200 行，新增 Markdown 能力（如 LaTeX）只需修改 MarkdownRenderer.tsx。
+ *  - 使用 @tanstack/react-virtual 实现虚拟列表，仅渲染可视区域内的消息，
+ *    大幅提升长对话的性能表现
  */
-import { useAutoScroll } from '../../hooks/useAutoScroll';
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import RobotProfileImage from '../../assets/robot.png';
 import UserProfileImage from '../../assets/user.png';
 import './ChatMessages.css';
@@ -74,7 +73,8 @@ function isImageUrl(urlString: string): boolean {
 // 单条消息组件
 // ─────────────────────────────────────────────
 
-function ChatMessageItem({
+// 使用 React.memo 包裹单条消息组件，避免虚拟列表重建时不必要的重渲染
+const ChatMessageItem = React.memo(function ChatMessageItem({
   message,
   sender,
   time,
@@ -237,10 +237,10 @@ function ChatMessageItem({
       </div>
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────
-// 消息列表容器组件
+// 消息列表容器组件（虚拟列表实现）
 // ─────────────────────────────────────────────
 
 export function ChatMessages(props: ChatMessagesProps) {
@@ -256,24 +256,95 @@ export function ChatMessages(props: ChatMessagesProps) {
     return currentMessages.filter(msg => !hiddenIds.includes(msg.id.toString()));
   }, [currentMessages, currentChatId]);
 
-  // 使用自定义 Hook 实现消息列表自动滚动到底部
-  const chatMsgRef = useAutoScroll([visibleMessages]);
+  // 滚动容器引用
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // 记录上一次消息数量，用于判断是否需要自动滚动
+  const prevCountRef = useRef<number>(0);
+
+  // ── 虚拟列表核心配置 ──
+  const virtualizer = useVirtualizer({
+    count: visibleMessages.length,
+    // 滚动容器 DOM 元素
+    getScrollElement: () => scrollContainerRef.current,
+    // 预估每条消息的高度（px），实际高度由 measureElement 自动测量
+    estimateSize: () => 120,
+    // 在可视区域上下额外渲染的消息数量，减少快速滚动时的白屏
+    overscan: 5,
+  });
+
+  // ── 新消息到来时自动滚动到底部 ──
+  useEffect(() => {
+    const currentCount = visibleMessages.length;
+    if (currentCount > prevCountRef.current && currentCount > 0) {
+      // 使用 requestAnimationFrame 确保 DOM 已更新后再滚动
+      requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(currentCount - 1, { align: 'end', behavior: 'smooth' });
+      });
+    }
+    prevCountRef.current = currentCount;
+  }, [visibleMessages.length, virtualizer]);
+
+  // ── 切换会话时立即跳到底部（无动画） ──
+  useEffect(() => {
+    if (visibleMessages.length > 0) {
+      requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(visibleMessages.length - 1, { align: 'end' });
+      });
+    }
+  }, [currentChatId]);
+
+  // 测量元素回调，用于精确获取每条消息的实际高度
+  const measureElement = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (el) {
+        virtualizer.measureElement(el);
+      }
+    },
+    [virtualizer]
+  );
 
   return (
     <div className="chat-messages-wrapper">
-      <div className="chat-message-container" ref={chatMsgRef}>
-        {visibleMessages.map((chatMessage) => (
-          <ChatMessageItem
-            key={chatMessage.id}
-            id={chatMessage.id}
-            message={chatMessage.message}
-            sender={chatMessage.sender}
-            time={chatMessage.time}
-            imageUrl={chatMessage.imageUrl}
-            onStartEdit={onStartEdit}
-            userAvatar={userAvatar}
-          />
-        ))}
+      {/* 外层滚动容器 */}
+      <div className="chat-message-container" ref={scrollContainerRef}>
+        {/* 撑起虚拟列表总高度的占位容器 */}
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {/* 仅渲染当前可视区域内的消息项 */}
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const chatMessage = visibleMessages[virtualRow.index];
+            return (
+              <div
+                key={chatMessage.id}
+                ref={measureElement}
+                data-index={virtualRow.index}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  // 通过 translateY 将消息定位到正确的垂直位置
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <ChatMessageItem
+                  id={chatMessage.id}
+                  message={chatMessage.message}
+                  sender={chatMessage.sender}
+                  time={chatMessage.time}
+                  imageUrl={chatMessage.imageUrl}
+                  onStartEdit={onStartEdit}
+                  userAvatar={userAvatar}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
