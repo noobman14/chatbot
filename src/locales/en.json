@@ -112,5 +112,32 @@
     "newMessage": "New Message",
     "aiReplied": "AI has replied to your message",
     "permissionDenied": "Browser notification permission denied. Please enable it in browser settings."
+  },
+  "code": {
+    "openSandbox": "Code Sandbox",
+    "backToChat": "Back to Chat",
+    "title": "Frontend Code Sandbox",
+    "subtitle": "Edit HTML / CSS / JavaScript and run preview manually.",
+    "editor": "Editor",
+    "preview": "Preview",
+    "console": "Console",
+    "run": "Run",
+    "stop": "Stop",
+    "clearConsole": "Clear Logs",
+    "consoleEmpty": "Console output appears here after running.",
+    "runStarted": "Preview run started",
+    "runStopped": "Current run stopped",
+    "aiGenerate": "AI Generate",
+    "aiGeneratePlaceholder": "Describe the page you want...",
+    "generating": "Generating...",
+    "generateSuccess": "Code generated and filled into editor",
+    "generateError": "Code generation failed, please retry",
+    "history": "History",
+    "noHistory": "No generation history",
+    "loadHistory": "Load this record",
+    "modelDefault": "Default (1.8)",
+    "modelLite": "Doubao Lite",
+    "modelPro": "Doubao Pro",
+    "modelSeed18": "Doubao 1.8"
   }
 }

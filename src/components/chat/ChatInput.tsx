@@ -239,6 +239,7 @@ export function ChatInput({
           <NativeSelectOption value='' className='shrink-0'>默认模型</NativeSelectOption>
           <NativeSelectOption value='doubao-seed-1-6-lite-251015' className='shrink-0'>豆包 Lite</NativeSelectOption>
           <NativeSelectOption value='doubao-seed-2-0-pro-260215' className='shrink-0'>豆包 Pro</NativeSelectOption>
+          <NativeSelectOption value='doubao-seed-1-8-251228' className='shrink-0'>豆包 1.8</NativeSelectOption>
         </NativeSelect>
 
         {/* 发送按钮 */}

@@ -112,5 +112,32 @@
     "newMessage": "新消息",
     "aiReplied": "AI 已回复您的消息",
     "permissionDenied": "浏览器通知权限被拒绝，请在浏览器设置中开启。"
+  },
+  "code": {
+    "openSandbox": "代码沙箱",
+    "backToChat": "返回聊天",
+    "title": "前端代码沙箱",
+    "subtitle": "编辑 HTML / CSS / JavaScript，然后手动运行预览。",
+    "editor": "编辑器",
+    "preview": "预览",
+    "console": "控制台",
+    "run": "运行",
+    "stop": "停止",
+    "clearConsole": "清空日志",
+    "consoleEmpty": "运行后会在这里显示 console 输出。",
+    "runStarted": "已启动预览运行",
+    "runStopped": "已停止当前运行",
+    "aiGenerate": "AI 生成",
+    "aiGeneratePlaceholder": "描述你想要的页面效果...",
+    "generating": "正在生成...",
+    "generateSuccess": "代码已生成并填充到编辑器中",
+    "generateError": "代码生成失败，请重试",
+    "history": "历史记录",
+    "noHistory": "暂无生成历史",
+    "loadHistory": "加载此记录",
+    "modelDefault": "默认模型(1.8)",
+    "modelLite": "豆包 Lite",
+    "modelPro": "豆包 Pro",
+    "modelSeed18": "豆包 1.8"
   }
 }

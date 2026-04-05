@@ -889,5 +889,57 @@ export const api = {
     });
     const data = await handleResponse<{ polishedText: string }>(response);
     return data.polishedText;
+  },
+
+  /**
+   * AI 代码生成（结构化输出）
+   * 调用后端 AI 结构化输出接口，根据用户描述生成 HTML/CSS/JS 代码
+   * @param prompt 用户对页面的描述
+   * @param model 可选的模型名称
+   * @returns 包含 html, css, javascript, title, description 等字段的对象
+   */
+  async generateCode(prompt: string, model?: string) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ prompt, model })
+    });
+    return handleResponse<{
+      id: string;
+      html: string;
+      css: string;
+      javascript: string;
+      title: string;
+      description: string;
+      createdAt: string;
+    }>(response);
+  },
+
+  /**
+   * 获取代码生成历史记录
+   * @param page 页码（从 1 开始）
+   * @param pageSize 每页条数
+   */
+  async getCodeGenHistory(page: number = 1, pageSize: number = 10) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen/history?page=${page}&pageSize=${pageSize}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      records: Array<{
+        id: string;
+        prompt: string;
+        title: string;
+        description: string;
+        html: string;
+        css: string;
+        javascript: string;
+        model: string;
+        createdAt: number;
+      }>;
+      total: number;
+      page: number;
+      pageSize: number;
+    }>(response);
   }
 };

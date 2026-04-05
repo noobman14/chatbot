@@ -20,6 +20,7 @@ import { UnauthorizedListener } from '@/components/UnauthorizedListener'
 const LoginRoute = lazy(() => import('./pages/LoginRoute'));
 const AdminRoute = lazy(() => import('./pages/AdminRoute'));
 const ChatRoute = lazy(() => import('./pages/ChatRoute'));
+const CodeRoute = lazy(() => import('./pages/CodeRoute.tsx'));
 
 /**
  * 全局加载中的占位组件
@@ -43,6 +44,8 @@ export function App() {
         <Route path="/login" element={<LoginRoute />} />
         {/* 管理员路由 */}
         <Route path="/admin/*" element={<AdminRoute />} />
+        {/* 代码沙箱页面（受保护路由） */}
+        <Route path="/code" element={<CodeRoute />} />
         {/* 用户聊天应用（受保护路由） */}
         <Route path="/*" element={<ChatRoute />} />
       </Routes>

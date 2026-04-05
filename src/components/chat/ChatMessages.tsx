@@ -1,11 +1,11 @@
 /**
  * ChatMessages.tsx
  *
- * 职责（重构后）：
+ * 职责：
  *  - 渲染消息列表，负责消息气泡布局、头像、时间戳、编辑/复制操作按钮
  *  - 所有 Markdown 渲染逻辑已提取到 MarkdownRenderer 组件，本文件只调用它
  *  - 使用 @tanstack/react-virtual 实现虚拟列表，仅渲染可视区域内的消息，
- *    大幅提升长对话的性能表现
+ *    提升长对话的性能表现
  */
 import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
