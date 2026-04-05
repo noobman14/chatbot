@@ -138,6 +138,7 @@
     "modelDefault": "默认模型(1.8)",
     "modelLite": "豆包 Lite",
     "modelPro": "豆包 Pro",
-    "modelSeed18": "豆包 1.8"
+    "modelSeed18": "豆包 1.8",
+    "modelGLM47": "GLM-4.7"
   }
 }

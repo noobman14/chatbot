@@ -138,6 +138,7 @@
     "modelDefault": "Default (1.8)",
     "modelLite": "Doubao Lite",
     "modelPro": "Doubao Pro",
-    "modelSeed18": "Doubao 1.8"
+    "modelSeed18": "Doubao 1.8",
+    "modelGLM47": "GLM-4.7"
   }
 }

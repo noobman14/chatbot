@@ -165,7 +165,7 @@ export default function CodeRoute() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiModel, setAiModel] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
-  
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyRecords, setHistoryRecords] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -521,13 +521,14 @@ export default function CodeRoute() {
                               <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{record.description || record.prompt}</p>
                               <div className="flex justify-between items-center">
                                 <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                                  {record.model === 'doubao-seed-1-6-lite-251015' ? 'Lite' : 
-                                   record.model === 'doubao-seed-2-0-pro-260215' ? 'Pro' : 
-                                   record.model === 'doubao-seed-1-8-251228' ? '1.8' : '1.8'}
+                                  {record.model === 'doubao-seed-1-6-lite-251015' ? '豆包 1.6 Lite' :
+                                    record.model === 'doubao-seed-2-0-pro-260215' ? '豆包 2.0 Pro' :
+                                      record.model === 'doubao-seed-1-8-251228' ? '豆包 1.8' :
+                                        record.model === 'glm-4-7-251222' ? 'GLM-4.7' : '豆包 1.8'}
                                 </span>
-                                <Button 
-                                  size="sm" 
-                                  variant="secondary" 
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
                                   className="text-xs h-7"
                                   onClick={() => {
                                     setDraft({
@@ -552,7 +553,7 @@ export default function CodeRoute() {
 
               <div className="flex flex-col sm:flex-row gap-2 border-t border-border pt-3 mt-1">
                 <div className="flex-1">
-                  <Input 
+                  <Input
                     placeholder={t('code.aiGeneratePlaceholder')}
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
@@ -564,8 +565,8 @@ export default function CodeRoute() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <NativeSelect 
-                    value={aiModel} 
+                  <NativeSelect
+                    value={aiModel}
                     onChange={(e) => setAiModel(e.target.value)}
                     className="w-28 md:w-32 text-sm"
                     disabled={aiGenerating}
@@ -574,9 +575,10 @@ export default function CodeRoute() {
                     <NativeSelectOption value="doubao-seed-1-6-lite-251015">{t('code.modelLite')}</NativeSelectOption>
                     <NativeSelectOption value="doubao-seed-2-0-pro-260215">{t('code.modelPro')}</NativeSelectOption>
                     <NativeSelectOption value="doubao-seed-1-8-251228">{t('code.modelSeed18')}</NativeSelectOption>
+                    <NativeSelectOption value="glm-4-7-251222">{t('code.modelGLM47')}</NativeSelectOption>
                   </NativeSelect>
-                  <Button 
-                    onClick={handleGenerateCode} 
+                  <Button
+                    onClick={handleGenerateCode}
                     disabled={!aiPrompt.trim() || aiGenerating}
                     className="gap-1.5 shrink-0"
                   >
