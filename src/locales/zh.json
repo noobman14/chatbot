@@ -117,7 +117,7 @@
     "openSandbox": "代码沙箱",
     "backToChat": "返回聊天",
     "title": "前端代码沙箱",
-    "subtitle": "编辑 HTML / CSS / JavaScript，然后手动运行预览。",
+    "subtitle": "默认 React 模式，支持 Tailwind + Lucide + shadcn-lite。",
     "editor": "编辑器",
     "preview": "预览",
     "console": "控制台",

@@ -117,7 +117,7 @@
     "openSandbox": "Code Sandbox",
     "backToChat": "Back to Chat",
     "title": "Frontend Code Sandbox",
-    "subtitle": "Edit HTML / CSS / JavaScript and run preview manually.",
+    "subtitle": "React by default with Tailwind + Lucide + shadcn-lite support.",
     "editor": "Editor",
     "preview": "Preview",
     "console": "Console",
