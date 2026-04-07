@@ -928,8 +928,42 @@ export const api = {
     });
     return handleResponse<{
       requestId: string;
+      recordId?: string;
+      parentCodeGenId?: string | null;
       title: string;
       description: string;
+      assistantMessage?: string;
+      changeSummary?: string;
+      entry: string;
+      files: Array<{
+        path: string;
+        code: string;
+      }>;
+      visibleFiles: string[];
+      dependencies: Record<string, string>;
+      externalResources: string[];
+      diagnostics: string[];
+      patches: Array<Record<string, unknown>>;
+    }>(response);
+  },
+
+  /**
+   * AI Sandpack 代码 patch（基于父版本增量修改）
+   */
+  async patchSandpackCode(parentId: string, patchPrompt: string, model?: string, maxTokens?: number | null) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen/sandpack/${parentId}/patch`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ patch_prompt: patchPrompt, model, max_tokens: maxTokens ?? null })
+    });
+    return handleResponse<{
+      requestId: string;
+      recordId?: string;
+      parentCodeGenId?: string | null;
+      title: string;
+      description: string;
+      assistantMessage?: string;
+      changeSummary?: string;
       entry: string;
       files: Array<{
         path: string;
@@ -985,8 +1019,11 @@ export const api = {
         prompt: string;
         title: string;
         description: string;
+        assistantMessage?: string;
+        changeSummary?: string;
         model: string;
         createdAt: number;
+        parentCodeGenId?: string | null;
         entry: string;
         visibleFiles: string[];
         dependencies: Record<string, string>;
@@ -999,6 +1036,38 @@ export const api = {
       total: number;
       page: number;
       pageSize: number;
+    }>(response);
+  },
+
+  /**
+   * 获取 Sandpack 某条记录的线性 thread（root -> current）
+   */
+  async getSandpackCodeGenThread(recordId: string) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen/sandpack/history/${recordId}/thread`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      recordId: string;
+      records: Array<{
+        id: string;
+        prompt: string;
+        title: string;
+        description: string;
+        assistantMessage?: string;
+        changeSummary?: string;
+        model: string;
+        createdAt: number;
+        parentCodeGenId?: string | null;
+        entry: string;
+        visibleFiles: string[];
+        dependencies: Record<string, string>;
+        externalResources: string[];
+        files: Array<{
+          path: string;
+          code: string;
+        }>;
+      }>;
     }>(response);
   },
 
