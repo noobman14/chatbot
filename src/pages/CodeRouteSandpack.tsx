@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   SandpackCodeEditor,
   SandpackConsole,
@@ -8,9 +8,7 @@ import {
   SandpackPreview,
   SandpackProvider,
 } from '@codesandbox/sandpack-react';
-import { History, LayoutTemplate, Sparkles } from 'lucide-react';
-
-import { autocompletion } from "@codemirror/autocomplete";
+import { History, LayoutTemplate, Loader2, Sparkles, Trash2 } from 'lucide-react';
 
 import { ThemeProvider } from '@/components/theme-provider';
 import { Header } from '@/components/layout/Header';
@@ -20,8 +18,24 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/utils/api';
 
 type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+type SandpackFileTree = Record<string, { code: string }>;
+type SandpackHistoryRecord = {
+  id: string;
+  prompt: string;
+  title: string;
+  description: string;
+  model: string;
+  createdAt: number;
+  entry: string;
+  visibleFiles: string[];
+  files: Array<{
+    path: string;
+    code: string;
+  }>;
+};
 
 const MODEL_OPTIONS = [
   { value: 'doubao-seed-1-6-lite-251015', label: '豆包 1.6 Lite' },
@@ -43,7 +57,40 @@ const PREVIEW_MAX_WIDTH: Record<PreviewDevice, string> = {
   mobile: '420px',
 };
 
-const SANDBOX_FILES = {
+const DEFAULT_ACTIVE_FILE = '/App.tsx';
+const DEFAULT_VISIBLE_FILES = ['/App.tsx', '/styles.css'];
+const HISTORY_PAGE_SIZE = 10;
+
+function normalizeFilePath(path: string): string {
+  const normalized = path.trim().replace(/\\/g, '/');
+  if (!normalized) {
+    return '';
+  }
+  return normalized.startsWith('/') ? normalized : `/${normalized}`;
+}
+
+function buildSandpackFileTree(files: Array<{ path: string; code: string }>): SandpackFileTree {
+  const nextFiles: SandpackFileTree = {};
+
+  for (const file of files) {
+    const path = normalizeFilePath(file.path);
+    if (!path) {
+      continue;
+    }
+    nextFiles[path] = { code: file.code ?? '' };
+  }
+
+  return nextFiles;
+}
+
+function formatHistoryTime(ts: number): string {
+  if (!Number.isFinite(ts)) {
+    return '未知时间';
+  }
+  return new Date(ts).toLocaleString('zh-CN', { hour12: false });
+}
+
+const SANDBOX_FILES: SandpackFileTree = {
   '/App.tsx': {
     code: `import './styles.css';
 
@@ -156,13 +203,188 @@ export default function CodeRouteSandpack() {
   const { user, isLoading: authLoading } = useAuth();
 
   const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState<string>('doubao-seed-1-6-lite-251015');
+  const [model, setModel] = useState<string>('doubao-seed-1-8-251228');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [device, setDevice] = useState<PreviewDevice>('desktop');
   const [showConsole, setShowConsole] = useState(false);
   const [editorTab, setEditorTab] = useState<'editor' | 'preview'>('editor');
+  const [sandpackFiles, setSandpackFiles] = useState<SandpackFileTree>(SANDBOX_FILES);
+  const [activeFile, setActiveFile] = useState(DEFAULT_ACTIVE_FILE);
+  const [visibleFiles, setVisibleFiles] = useState<string[]>(DEFAULT_VISIBLE_FILES);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateMeta, setGenerateMeta] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<SandpackHistoryRecord[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const [historyDeletingId, setHistoryDeletingId] = useState<string | null>(null);
 
   const previewFrameStyle = useMemo(() => ({ maxWidth: PREVIEW_MAX_WIDTH[device] }), [device]);
+  const fallbackVisibleFiles = useMemo(() => {
+    const paths = Object.keys(sandpackFiles);
+    return paths.slice(0, Math.min(8, paths.length));
+  }, [sandpackFiles]);
+  const hasMoreHistory = historyRecords.length < historyTotal;
+
+  const applyHistoryRecord = useCallback((record: SandpackHistoryRecord) => {
+    const nextFiles = buildSandpackFileTree(record.files ?? []);
+    const filePaths = Object.keys(nextFiles);
+    if (filePaths.length === 0) {
+      setGenerateError('该历史记录没有可恢复的文件。');
+      return;
+    }
+
+    setSandpackFiles(nextFiles);
+
+    const nextVisibleFiles = (record.visibleFiles ?? [])
+      .map((path) => normalizeFilePath(path))
+      .filter((path, index, list) => Boolean(nextFiles[path]) && list.indexOf(path) === index);
+
+    const effectiveVisibleFiles = nextVisibleFiles.length > 0
+      ? nextVisibleFiles
+      : filePaths.slice(0, Math.min(8, filePaths.length));
+    setVisibleFiles(effectiveVisibleFiles);
+
+    const normalizedEntry = normalizeFilePath(record.entry ?? '');
+    const nextActiveFile = nextFiles[normalizedEntry]
+      ? normalizedEntry
+      : (effectiveVisibleFiles[0] ?? filePaths[0]);
+
+    setActiveFile(nextActiveFile);
+    setEditorTab('editor');
+    setHistoryOpen(false);
+    setGenerateError(null);
+    setGenerateMeta(`已恢复历史：${record.title || '未命名页面'}`);
+  }, []);
+
+  const loadHistoryData = useCallback(async (page: number = 1, append: boolean = false) => {
+    if (!user) {
+      return;
+    }
+
+    if (append) {
+      setHistoryLoadingMore(true);
+    } else {
+      setHistoryLoading(true);
+      setHistoryError(null);
+    }
+
+    try {
+      const result = await api.getSandpackCodeGenHistory(page, HISTORY_PAGE_SIZE);
+      const records = result.records ?? [];
+      setHistoryPage(result.page ?? page);
+      setHistoryTotal(result.total ?? 0);
+
+      if (append) {
+        setHistoryRecords((prev) => {
+          const map = new Map<string, SandpackHistoryRecord>();
+          for (const item of prev) {
+            map.set(item.id, item);
+          }
+          for (const item of records) {
+            map.set(item.id, item);
+          }
+          return Array.from(map.values());
+        });
+      } else {
+        setHistoryRecords(records);
+      }
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : '加载历史记录失败');
+    } finally {
+      if (append) {
+        setHistoryLoadingMore(false);
+      } else {
+        setHistoryLoading(false);
+      }
+    }
+  }, [user]);
+
+  const loadMoreHistory = useCallback(() => {
+    if (historyLoading || historyLoadingMore || !hasMoreHistory) {
+      return;
+    }
+    void loadHistoryData(historyPage + 1, true);
+  }, [hasMoreHistory, historyLoading, historyLoadingMore, historyPage, loadHistoryData]);
+
+  const handleDeleteHistory = useCallback(async (recordId: string) => {
+    if (historyDeletingId) {
+      return;
+    }
+
+    setHistoryDeletingId(recordId);
+    setHistoryError(null);
+    try {
+      await api.deleteSandpackCodeGenHistory(recordId);
+      setHistoryRecords((prev) => prev.filter((record) => record.id !== recordId));
+      setHistoryTotal((prev) => Math.max(0, prev - 1));
+      setGenerateMeta('历史记录已删除');
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : '删除历史记录失败');
+    } finally {
+      setHistoryDeletingId(null);
+    }
+  }, [historyDeletingId]);
+
+  useEffect(() => {
+    if (historyOpen) {
+      void loadHistoryData(1, false);
+    }
+  }, [historyOpen, loadHistoryData]);
+
+  const handleGenerate = async () => {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt || isGenerating) {
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerateError(null);
+    setGenerateMeta(null);
+
+    try {
+      const result = await api.generateSandpackCode(trimmedPrompt, model, 30000);
+      const nextFiles = buildSandpackFileTree(result.files ?? []);
+      const filePaths = Object.keys(nextFiles);
+      if (filePaths.length === 0) {
+        throw new Error('未返回可用文件，请重试。');
+      }
+
+      setSandpackFiles(nextFiles);
+
+      const apiVisibleFiles = (result.visibleFiles ?? [])
+        .map((path) => normalizeFilePath(path))
+        .filter((path, index, list) => Boolean(nextFiles[path]) && list.indexOf(path) === index);
+
+      const nextVisibleFiles = apiVisibleFiles.length > 0
+        ? apiVisibleFiles
+        : filePaths.slice(0, Math.min(8, filePaths.length));
+      setVisibleFiles(nextVisibleFiles);
+
+      const normalizedEntry = normalizeFilePath(result.entry ?? '');
+      const nextActiveFile = nextFiles[normalizedEntry]
+        ? normalizedEntry
+        : (nextVisibleFiles[0] ?? filePaths[0]);
+      setActiveFile(nextActiveFile);
+      setEditorTab('editor');
+
+      const diagnosticsCount = Array.isArray(result.diagnostics) ? result.diagnostics.length : 0;
+      setGenerateMeta(diagnosticsCount > 0
+        ? `${result.title || '生成完成'}（${diagnosticsCount} 条提示）`
+        : (result.title || '生成完成'));
+
+      if (historyOpen) {
+        void loadHistoryData(1, false);
+      }
+    } catch (error) {
+      setGenerateError(error instanceof Error ? error.message : '生成失败，请稍后重试。');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -202,12 +424,82 @@ export default function CodeRouteSandpack() {
                 <SheetContent className="w-full sm:max-w-md">
                   <SheetHeader>
                     <SheetTitle>历史记录</SheetTitle>
-                    <SheetDescription>联调接入后，这里将展示生成记录和回放入口。</SheetDescription>
+                    <SheetDescription>最近的 Sandpack 生成记录，可点击回放。</SheetDescription>
                   </SheetHeader>
-                  <div className="px-4 pb-4">
-                    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-5 text-sm text-muted-foreground">
-                      暂无历史数据
-                    </div>
+                  <div className="space-y-3 px-4 pb-4">
+                    {historyLoading && (
+                      <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                        历史加载中...
+                      </div>
+                    )}
+
+                    {!historyLoading && historyError && (
+                      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+                        {historyError}
+                      </div>
+                    )}
+
+                    {!historyLoading && !historyError && historyRecords.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-5 text-sm text-muted-foreground">
+                        暂无历史数据
+                      </div>
+                    )}
+
+                    {!historyLoading && !historyError && historyRecords.map((record) => (
+                      <div
+                        key={record.id}
+                        className="rounded-lg border border-border bg-card p-3"
+                      >
+                        <button
+                          type="button"
+                          className="w-full text-left transition-colors hover:text-primary"
+                          onClick={() => applyHistoryRecord(record)}
+                        >
+                          <p className="truncate text-sm font-medium">{record.title || '未命名页面'}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{record.prompt}</p>
+                        </button>
+
+                        <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate">{record.model || '-'}</span>
+                            <span>{formatHistoryTime(record.createdAt)}</span>
+                          </div>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-destructive hover:text-destructive"
+                            disabled={historyDeletingId === record.id}
+                            onClick={() => void handleDeleteHistory(record.id)}
+                          >
+                            {historyDeletingId === record.id ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-3" />
+                            )}
+                            删除
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {!historyLoading && !historyError && hasMoreHistory && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={loadMoreHistory}
+                        disabled={historyLoadingMore}
+                        className="w-full"
+                      >
+                        {historyLoadingMore ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            加载中...
+                          </>
+                        ) : '加载更多'}
+                      </Button>
+                    )}
                   </div>
                 </SheetContent>
               </Sheet>
@@ -239,10 +531,17 @@ export default function CodeRouteSandpack() {
                     </NativeSelect>
                   </div>
 
-                  <Button className="w-full gap-2" disabled>
+                  <Button
+                    className="w-full gap-2"
+                    disabled={!prompt.trim() || isGenerating}
+                    onClick={handleGenerate}
+                  >
                     <Sparkles className="size-4" />
-                    生成（联调未接入）
+                    {isGenerating ? '生成中...' : '生成'}
                   </Button>
+
+                  {generateMeta && <p className="text-xs text-muted-foreground">{generateMeta}</p>}
+                  {generateError && <p className="text-xs text-destructive">{generateError}</p>}
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -267,10 +566,10 @@ export default function CodeRouteSandpack() {
                 <SandpackProvider
                   style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                   template="react-ts"
-                  files={SANDBOX_FILES}
+                  files={sandpackFiles}
                   options={{
-                    activeFile: '/App.tsx',
-                    visibleFiles: ['/App.tsx', '/styles.css'],
+                    activeFile,
+                    visibleFiles: visibleFiles.length > 0 ? visibleFiles : fallbackVisibleFiles,
                     recompileMode: 'delayed',
                     recompileDelay: 300,
                   }}
@@ -301,36 +600,35 @@ export default function CodeRouteSandpack() {
                         {showConsole ? '隐藏控制台' : '显示控制台'}
                       </Button>
 
-                      <Tabs value={device} onValueChange={(value) => setDevice(value as PreviewDevice)}>
+                      {editorTab !== 'editor' && (<Tabs value={device} onValueChange={(value) => setDevice(value as PreviewDevice)}>
                         <TabsList className="h-8">
                           <TabsTrigger value="desktop" className="text-xs">Desktop</TabsTrigger>
                           <TabsTrigger value="tablet" className="text-xs">Tablet</TabsTrigger>
                           <TabsTrigger value="mobile" className="text-xs">Mobile</TabsTrigger>
                         </TabsList>
-                      </Tabs>
+                      </Tabs>)}
                     </div>
                   </div>
 
                   {/* Sandpack 编辑器 */}
-                  <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                     {editorTab === 'editor' ? (
-                      <div className='flex-1'>
-                        <SandpackLayout style={{ height: '100%' }}>
-                          <SandpackFileExplorer style={{ height: '100%' }} />
+                      <div className='min-h-0 flex-1 overflow-hidden'>
+                        <SandpackLayout style={{ height: '100%', minHeight: 0 }}>
+                          <SandpackFileExplorer style={{ height: '100%', maxHeight: '100%' }} />
                           <SandpackCodeEditor
-                            style={{ height: '100%' }}
+                            style={{ height: '100%', maxHeight: '100%', minHeight: 0 }}
                             showTabs
                             closableTabs
                             showLineNumbers
                             showInlineErrors
-                            wrapContent
+                            wrapContent={true}
 
-                            extensions={[autocompletion()]}
                           />
                         </SandpackLayout>
                       </div>
                     ) : (
-                      <div className='flex-1 flex items-center justify-center bg-muted/20'>
+                      <div className='min-h-0 flex-1 overflow-hidden bg-muted/20'>
                         <div className="h-full transition-all duration-300" style={{ width: '100%', ...previewFrameStyle }}>
                           <SandpackPreview
                             style={{ height: '100%' }}

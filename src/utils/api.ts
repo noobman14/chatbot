@@ -916,6 +916,32 @@ export const api = {
   },
 
   /**
+   * AI 代码生成（Sandpack 文件树格式）
+   * @param prompt 用户需求
+   * @param model 可选模型名称
+   */
+  async generateSandpackCode(prompt: string, model?: string, maxTokens?: number | null) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen/sandpack`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ prompt, model, max_tokens: maxTokens ?? null })
+    });
+    return handleResponse<{
+      requestId: string;
+      title: string;
+      description: string;
+      entry: string;
+      files: Array<{
+        path: string;
+        code: string;
+      }>;
+      visibleFiles: string[];
+      diagnostics: string[];
+      patches: Array<Record<string, unknown>>;
+    }>(response);
+  },
+
+  /**
    * 获取代码生成历史记录
    * @param page 页码（从 1 开始）
    * @param pageSize 每页条数
@@ -941,5 +967,45 @@ export const api = {
       page: number;
       pageSize: number;
     }>(response);
+  },
+
+  /**
+   * 获取 Sandpack 代码生成历史
+   */
+  async getSandpackCodeGenHistory(page: number = 1, pageSize: number = 20) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen/sandpack/history?page=${page}&pageSize=${pageSize}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    return handleResponse<{
+      records: Array<{
+        id: string;
+        prompt: string;
+        title: string;
+        description: string;
+        model: string;
+        createdAt: number;
+        entry: string;
+        visibleFiles: string[];
+        files: Array<{
+          path: string;
+          code: string;
+        }>;
+      }>;
+      total: number;
+      page: number;
+      pageSize: number;
+    }>(response);
+  },
+
+  /**
+   * 删除 Sandpack 代码生成历史
+   */
+  async deleteSandpackCodeGenHistory(recordId: string) {
+    const response = await apiFetch(`${API_BASE_URL}/ai/codegen/sandpack/history/${recordId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse<void>(response);
   }
 };

@@ -642,7 +642,7 @@ export default function CodeRoute() {
                     onPointerDown={startVerticalResize}
                     className="group mx-1 w-2 shrink-0 cursor-col-resize rounded-md bg-transparent transition-colors hover:bg-accent"
                   >
-                    <span className="mx-auto block h-full w-[2px] rounded-full bg-border group-hover:bg-primary/70" />
+                    <span className="mx-auto block h-full w-0.5 rounded-full bg-border group-hover:bg-primary/70" />
                   </button>
 
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75">
@@ -666,7 +666,7 @@ export default function CodeRoute() {
                   onPointerDown={startHorizontalResize}
                   className="group my-1 h-2 w-full shrink-0 cursor-row-resize rounded-md bg-transparent transition-colors hover:bg-accent"
                 >
-                  <span className="mx-auto mt-[3px] block h-[2px] w-16 rounded-full bg-border group-hover:bg-primary/70" />
+                  <span className="mx-auto mt-[3px] block h-0.5 w-16 rounded-full bg-border group-hover:bg-primary/70" />
                 </button>
 
                 <div
@@ -682,7 +682,7 @@ export default function CodeRoute() {
                       <p className="text-zinc-400">{t('code.consoleEmpty')}</p>
                     ) : (
                       consoleEntries.map((entry) => (
-                        <p key={entry.id} className="mb-1 whitespace-pre-wrap break-words">
+                        <p key={entry.id} className="mb-1 whitespace-pre-wrap wrap-break-word">
                           <span className="text-zinc-500">[{entry.time}]</span>{' '}
                           <span
                             className={
@@ -766,7 +766,7 @@ export default function CodeRoute() {
                         <p className="text-zinc-400">{t('code.consoleEmpty')}</p>
                       ) : (
                         consoleEntries.map((entry) => (
-                          <p key={entry.id} className="mb-1 whitespace-pre-wrap break-words">
+                          <p key={entry.id} className="mb-1 whitespace-pre-wrap wrap-break-word">
                             <span className="text-zinc-500">[{entry.time}]</span>{' '}
                             <span
                               className={
