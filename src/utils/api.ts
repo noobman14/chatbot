@@ -936,6 +936,8 @@ export const api = {
         code: string;
       }>;
       visibleFiles: string[];
+      dependencies: Record<string, string>;
+      externalResources: string[];
       diagnostics: string[];
       patches: Array<Record<string, unknown>>;
     }>(response);
@@ -987,6 +989,8 @@ export const api = {
         createdAt: number;
         entry: string;
         visibleFiles: string[];
+        dependencies: Record<string, string>;
+        externalResources: string[];
         files: Array<{
           path: string;
           code: string;

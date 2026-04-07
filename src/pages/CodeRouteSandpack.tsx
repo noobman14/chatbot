@@ -22,6 +22,7 @@ import { api } from '@/utils/api';
 
 type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
 type SandpackFileTree = Record<string, { code: string }>;
+type SandpackDependencyMap = Record<string, string>;
 type SandpackHistoryRecord = {
   id: string;
   prompt: string;
@@ -31,6 +32,8 @@ type SandpackHistoryRecord = {
   createdAt: number;
   entry: string;
   visibleFiles: string[];
+  dependencies?: SandpackDependencyMap;
+  externalResources?: string[];
   files: Array<{
     path: string;
     code: string;
@@ -59,7 +62,24 @@ const PREVIEW_MAX_WIDTH: Record<PreviewDevice, string> = {
 
 const DEFAULT_ACTIVE_FILE = '/App.tsx';
 const DEFAULT_VISIBLE_FILES = ['/App.tsx', '/styles.css'];
+const DEFAULT_EXTERNAL_RESOURCES = ['https://cdn.tailwindcss.com'];
 const HISTORY_PAGE_SIZE = 10;
+const MAX_SANDBOX_DEPENDENCIES = 12;
+const MAX_EXTERNAL_RESOURCES = 8;
+const BASE_SANDBOX_DEPENDENCIES: SandpackDependencyMap = {
+  clsx: '2.1.1',
+  'tailwind-merge': '3.4.0',
+  'class-variance-authority': '0.7.1',
+  'lucide-react': '0.554.0',
+  '@radix-ui/react-slot': '1.2.4',
+  dayjs: '1.11.19',
+};
+const ALLOWED_EXTERNAL_RESOURCE_HOSTS = new Set([
+  'cdn.tailwindcss.com',
+  'esm.sh',
+  'cdn.jsdelivr.net',
+  'unpkg.com',
+]);
 
 function normalizeFilePath(path: string): string {
   const normalized = path.trim().replace(/\\/g, '/');
@@ -81,6 +101,75 @@ function buildSandpackFileTree(files: Array<{ path: string; code: string }>): Sa
   }
 
   return nextFiles;
+}
+
+function normalizeDependencies(rawDependencies?: SandpackDependencyMap | null): SandpackDependencyMap {
+  if (!rawDependencies || typeof rawDependencies !== 'object') {
+    return {};
+  }
+
+  const dependencies: SandpackDependencyMap = {};
+  const maxCustomDependencies = Math.max(0, MAX_SANDBOX_DEPENDENCIES - Object.keys(BASE_SANDBOX_DEPENDENCIES).length);
+  const entries = Object.entries(rawDependencies).slice(0, maxCustomDependencies);
+  for (const [name, version] of entries) {
+    const pkg = typeof name === 'string' ? name.trim() : '';
+    const ver = typeof version === 'string' ? version.trim() : '';
+    if (!pkg || !ver || BASE_SANDBOX_DEPENDENCIES[pkg]) {
+      continue;
+    }
+    dependencies[pkg] = ver;
+  }
+
+  return dependencies;
+}
+
+function mergeDependencies(rawDependencies?: SandpackDependencyMap | null): SandpackDependencyMap {
+  const customDependencies = normalizeDependencies(rawDependencies);
+  // 预装依赖版本由宿主统一兜底，避免 AI 返回版本不一致导致沙箱抖动。
+  return {
+    ...customDependencies,
+    ...BASE_SANDBOX_DEPENDENCIES,
+  };
+}
+
+function isAllowedExternalResource(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return (parsed.protocol === 'https:' || parsed.protocol === 'http:')
+      && ALLOWED_EXTERNAL_RESOURCE_HOSTS.has(host);
+  } catch {
+    return false;
+  }
+}
+
+function normalizeExternalResources(rawResources?: string[] | null): string[] {
+  if (!Array.isArray(rawResources)) {
+    return [];
+  }
+
+  const deduped = new Set<string>();
+  for (const item of rawResources) {
+    if (deduped.size >= MAX_EXTERNAL_RESOURCES) {
+      break;
+    }
+    if (typeof item !== 'string') {
+      continue;
+    }
+
+    const value = item.trim();
+    if (!value || !isAllowedExternalResource(value)) {
+      continue;
+    }
+    deduped.add(value);
+  }
+
+  return Array.from(deduped);
+}
+
+function mergeExternalResources(rawResources?: string[] | null): string[] {
+  const merged = [...DEFAULT_EXTERNAL_RESOURCES, ...normalizeExternalResources(rawResources)];
+  return Array.from(new Set(merged)).slice(0, MAX_EXTERNAL_RESOURCES);
 }
 
 function formatHistoryTime(ts: number): string {
@@ -211,6 +300,8 @@ export default function CodeRouteSandpack() {
   const [sandpackFiles, setSandpackFiles] = useState<SandpackFileTree>(SANDBOX_FILES);
   const [activeFile, setActiveFile] = useState(DEFAULT_ACTIVE_FILE);
   const [visibleFiles, setVisibleFiles] = useState<string[]>(DEFAULT_VISIBLE_FILES);
+  const [sandpackDependencies, setSandpackDependencies] = useState<SandpackDependencyMap>(BASE_SANDBOX_DEPENDENCIES);
+  const [externalResources, setExternalResources] = useState<string[]>(DEFAULT_EXTERNAL_RESOURCES);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generateMeta, setGenerateMeta] = useState<string | null>(null);
@@ -227,6 +318,13 @@ export default function CodeRouteSandpack() {
     const paths = Object.keys(sandpackFiles);
     return paths.slice(0, Math.min(8, paths.length));
   }, [sandpackFiles]);
+  const sandpackProviderKey = useMemo(() => JSON.stringify({
+    dependencies: sandpackDependencies,
+    resources: externalResources,
+  }), [sandpackDependencies, externalResources]);
+  const sandpackCustomSetup = useMemo(() => ({
+    dependencies: sandpackDependencies,
+  }), [sandpackDependencies]);
   const hasMoreHistory = historyRecords.length < historyTotal;
 
   const applyHistoryRecord = useCallback((record: SandpackHistoryRecord) => {
@@ -247,6 +345,8 @@ export default function CodeRouteSandpack() {
       ? nextVisibleFiles
       : filePaths.slice(0, Math.min(8, filePaths.length));
     setVisibleFiles(effectiveVisibleFiles);
+    setSandpackDependencies(mergeDependencies(record.dependencies));
+    setExternalResources(mergeExternalResources(record.externalResources));
 
     const normalizedEntry = normalizeFilePath(record.entry ?? '');
     const nextActiveFile = nextFiles[normalizedEntry]
@@ -315,19 +415,57 @@ export default function CodeRouteSandpack() {
       return;
     }
 
+    const loadedCountBeforeDelete = historyRecords.length;
+    const totalBeforeDelete = historyTotal;
+
     setHistoryDeletingId(recordId);
     setHistoryError(null);
     try {
       await api.deleteSandpackCodeGenHistory(recordId);
-      setHistoryRecords((prev) => prev.filter((record) => record.id !== recordId));
-      setHistoryTotal((prev) => Math.max(0, prev - 1));
+
+      const afterDeleteRecords = historyRecords.filter((record) => record.id !== recordId);
+      const afterDeleteTotal = Math.max(0, totalBeforeDelete - 1);
+      const desiredVisibleCount = Math.min(loadedCountBeforeDelete, afterDeleteTotal);
+
+      setHistoryRecords(afterDeleteRecords);
+      setHistoryTotal(afterDeleteTotal);
+
+      // 删除后如果当前已加载列表少于应展示数量，自动补齐一条，避免“空洞感”。
+      if (afterDeleteRecords.length < desiredVisibleCount) {
+        const targetPage = Math.max(1, Math.ceil(desiredVisibleCount / HISTORY_PAGE_SIZE));
+        const result = await api.getSandpackCodeGenHistory(targetPage, HISTORY_PAGE_SIZE);
+        const pageRecords = result.records ?? [];
+
+        const existingIds = new Set(afterDeleteRecords.map((item) => item.id));
+        const mergedRecords = [...afterDeleteRecords];
+        for (const item of pageRecords) {
+          if (!existingIds.has(item.id)) {
+            mergedRecords.push(item);
+            existingIds.add(item.id);
+          }
+          if (mergedRecords.length >= desiredVisibleCount) {
+            break;
+          }
+        }
+
+        const backendTotal = result.total ?? afterDeleteTotal;
+        const normalizedVisibleCount = Math.min(desiredVisibleCount, backendTotal);
+        const normalizedRecords = mergedRecords.slice(0, normalizedVisibleCount);
+
+        setHistoryRecords(normalizedRecords);
+        setHistoryTotal(backendTotal);
+        setHistoryPage(Math.max(1, Math.ceil(normalizedRecords.length / HISTORY_PAGE_SIZE)));
+      } else {
+        setHistoryPage(Math.max(1, Math.ceil(afterDeleteRecords.length / HISTORY_PAGE_SIZE)));
+      }
+
       setGenerateMeta('历史记录已删除');
     } catch (error) {
       setHistoryError(error instanceof Error ? error.message : '删除历史记录失败');
     } finally {
       setHistoryDeletingId(null);
     }
-  }, [historyDeletingId]);
+  }, [historyDeletingId, historyRecords, historyTotal]);
 
   useEffect(() => {
     if (historyOpen) {
@@ -347,6 +485,8 @@ export default function CodeRouteSandpack() {
 
     try {
       const result = await api.generateSandpackCode(trimmedPrompt, model, 30000);
+      //生成结果log调试
+      console.log('生成结果', result);
       const nextFiles = buildSandpackFileTree(result.files ?? []);
       const filePaths = Object.keys(nextFiles);
       if (filePaths.length === 0) {
@@ -363,6 +503,8 @@ export default function CodeRouteSandpack() {
         ? apiVisibleFiles
         : filePaths.slice(0, Math.min(8, filePaths.length));
       setVisibleFiles(nextVisibleFiles);
+      setSandpackDependencies(mergeDependencies(result.dependencies));
+      setExternalResources(mergeExternalResources(result.externalResources));
 
       const normalizedEntry = normalizeFilePath(result.entry ?? '');
       const nextActiveFile = nextFiles[normalizedEntry]
@@ -516,7 +658,7 @@ export default function CodeRouteSandpack() {
                       value={prompt}
                       onChange={(event) => setPrompt(event.target.value)}
                       placeholder="描述你希望生成的页面结构、风格和交互..."
-                      className="min-h-[100px] resize-none bg-card"
+                      className="min-h-[100px] resize-none bg-card w-full"
                     />
                   </div>
 
@@ -564,12 +706,15 @@ export default function CodeRouteSandpack() {
               {/* 右侧编辑区域 */}
               <div className="flex min-h-0 flex-1 flex-col">
                 <SandpackProvider
+                  key={sandpackProviderKey}
                   style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                   template="react-ts"
                   files={sandpackFiles}
+                  customSetup={sandpackCustomSetup}
                   options={{
                     activeFile,
                     visibleFiles: visibleFiles.length > 0 ? visibleFiles : fallbackVisibleFiles,
+                    externalResources,
                     recompileMode: 'delayed',
                     recompileDelay: 300,
                   }}
@@ -628,7 +773,7 @@ export default function CodeRouteSandpack() {
                         </SandpackLayout>
                       </div>
                     ) : (
-                      <div className='min-h-0 flex-1 overflow-hidden bg-muted/20'>
+                      <div className='min-h-0 flex-1 overflow-hidden flex justify-center items-center bg-muted/20'>
                         <div className="h-full transition-all duration-300" style={{ width: '100%', ...previewFrameStyle }}>
                           <SandpackPreview
                             style={{ height: '100%' }}
