@@ -636,8 +636,8 @@ export default function CodeRouteSandpack() {
 
     try {
       const result = currentRecordId
-        ? await api.patchSandpackCode(currentRecordId, trimmedPrompt, model, 30000)
-        : await api.generateSandpackCode(trimmedPrompt, model, 30000);
+        ? await api.patchSandpackCode(currentRecordId, trimmedPrompt, model, 60000)
+        : await api.generateSandpackCode(trimmedPrompt, model, 60000);
       applySandpackPayload(result);
       console.log('Sandpack generation result:', result);
       const diagnosticsCount = Array.isArray(result.diagnostics) ? result.diagnostics.length : 0;
