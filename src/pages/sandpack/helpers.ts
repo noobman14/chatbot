@@ -5,6 +5,7 @@ import {
   MAX_EXTERNAL_RESOURCES,
   MAX_SANDBOX_DEPENDENCIES,
 } from './constants';
+import { SANDBOX_PRESET_FILES, SANDBOX_PRESET_STYLES_CSS } from './preset-files';
 import type { SandpackDependencyMap, SandpackFileTree } from './types';
 
 export function normalizeFilePath(path: string): string {
@@ -15,9 +16,24 @@ export function normalizeFilePath(path: string): string {
   return normalized.startsWith('/') ? normalized : `/${normalized}`;
 }
 
+/**
+ * 构建 Sandpack 文件树
+ *
+ * 将 AI 返回的文件列表转换为 Sandpack 文件树格式，
+ * 并自动注入预置的 shadcn 组件文件（如果 AI 没有生成对应路径）。
+ * 这样即使 AI 代码中 import 了 `./components/ui/button`，
+ * 也不会因为文件缺失而报错。
+ */
 export function buildSandpackFileTree(files: Array<{ path: string; code: string }>): SandpackFileTree {
-  const nextFiles: SandpackFileTree = {};
+  // 先放入预置文件作为底层（会被 AI 生成的同名文件覆盖）
+  const nextFiles: SandpackFileTree = { ...SANDBOX_PRESET_FILES };
 
+  // 确保预置的 styles.css 也作为默认底层
+  if (!nextFiles['/styles.css']) {
+    nextFiles['/styles.css'] = { code: SANDBOX_PRESET_STYLES_CSS };
+  }
+
+  // AI 生成的文件覆盖预置文件（同名文件以 AI 版本为准）
   for (const file of files) {
     const path = normalizeFilePath(file.path);
     if (!path) {

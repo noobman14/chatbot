@@ -1,4 +1,5 @@
 import type { PreviewDevice, SandpackDependencyMap, SandpackFileTree } from './types';
+import { SANDBOX_PRESET_FILES, SANDBOX_PRESET_STYLES_CSS } from './preset-files';
 
 export const MODEL_OPTIONS = [
   { value: 'doubao-seed-1-6-lite-251015', label: '豆包 1.6 Lite' },
@@ -7,33 +8,42 @@ export const MODEL_OPTIONS = [
   { value: 'glm-4-7-251222', label: 'GLM-4.7' },
 ] as const;
 
-export const EXAMPLE_PROMPTS = [
-  '做一个招聘官网首页，强调大标题、统计数字、CTA 区块。',
-  '做一个数据看板页面，包含 KPI 卡片、图表区域和筛选栏。',
-  '做一个课程详情页，包含章节目录、讲师信息和购买按钮。',
-  '做一个产品对比页面，支持三列功能对比与价格方案。',
-];
-
 export const PREVIEW_MAX_WIDTH: Record<PreviewDevice, string> = {
   desktop: '100%',
   tablet: '768px',
   mobile: '420px',
 };
 
+// 默认展示的文件（预置组件文件隐藏但可用）
 export const DEFAULT_ACTIVE_FILE = '/App.tsx';
 export const DEFAULT_VISIBLE_FILES = ['/App.tsx', '/styles.css'];
 export const DEFAULT_EXTERNAL_RESOURCES = ['https://cdn.tailwindcss.com'];
 
 export const HISTORY_PAGE_SIZE = 10;
-export const MAX_SANDBOX_DEPENDENCIES = 12;
+export const MAX_SANDBOX_DEPENDENCIES = 20; // 增大上限以容纳 Radix 包
 export const MAX_EXTERNAL_RESOURCES = 8;
 
+/**
+ * Sandpack 基础预装依赖
+ * 包含 shadcn 组件所需的所有运行时依赖（Radix UI 原语、CVA、工具库等）
+ */
 export const BASE_SANDBOX_DEPENDENCIES: SandpackDependencyMap = {
+  // shadcn 核心工具
   clsx: '2.1.1',
   'tailwind-merge': '3.4.0',
   'class-variance-authority': '0.7.1',
+
+  // 图标库
   'lucide-react': '0.554.0',
-  '@radix-ui/react-slot': '1.2.4',
+
+  // Radix UI 原语 —— shadcn 组件的底层依赖
+  '@radix-ui/react-slot': '1.2.4',         // Button asChild
+  '@radix-ui/react-label': '2.1.8',        // Label
+  '@radix-ui/react-separator': '1.1.8',    // Separator
+  '@radix-ui/react-tabs': '1.1.13',        // Tabs
+  '@radix-ui/react-avatar': '1.1.11',      // Avatar
+
+  // 工具库
   dayjs: '1.11.19',
 };
 
@@ -44,110 +54,67 @@ export const ALLOWED_EXTERNAL_RESOURCE_HOSTS = new Set([
   'unpkg.com',
 ]);
 
+/**
+ * Sandpack 默认文件树
+ * 合并预置组件文件 + 默认 App.tsx + styles.css
+ * AI 生成代码后会覆盖 /App.tsx 和 /styles.css，但预置组件文件会保留
+ */
 export const SANDBOX_FILES: SandpackFileTree = {
-  '/App.tsx': {
-    code: `import './styles.css';
+  // 预置的 shadcn 组件、工具函数、入口文件
+  ...SANDBOX_PRESET_FILES,
 
-export default function App() {
-	return (
-		<main className="page">
-			<section className="hero-card">
-				<p className="badge">Sandpack Ready</p>
-				<h1>AI Generation Studio</h1>
-				<p>
-					This is a new sandbox workspace page. You can edit code in real time and
-					preview the result on the right side.
-				</p>
-				<div className="actions">
-					<button>Primary Action</button>
-					<button className="ghost">Secondary</button>
-				</div>
-			</section>
-		</main>
-	);
-}
-`,
-  },
+  // shadcn 主题 CSS 变量
   '/styles.css': {
-    code: `:root {
-	font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
+    code: SANDBOX_PRESET_STYLES_CSS,
+  },
 
-* {
-	box-sizing: border-box;
-}
+  // 默认 App.tsx —— 演示预置 shadcn 组件
+  '/App.tsx': {
+    code: `import "./styles.css";
+import { Button } from "./components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./components/ui/card";
+import { Badge } from "./components/ui/badge";
+import { Separator } from "./components/ui/separator";
+import { Input } from "./components/ui/input";
 
-body {
-	margin: 0;
-	min-height: 100vh;
-	background:
-		radial-gradient(circle at 10% 0%, #d7f3ff 0%, transparent 38%),
-		radial-gradient(circle at 95% 100%, #d3fae5 0%, transparent 36%),
-		#f8fafc;
-	color: #0f172a;
-}
+/**
+ * 默认首页 —— 展示 Sandpack 预置的 shadcn 组件
+ * AI 生成新代码时会完整替换此文件
+ */
+export default function App() {
+  return (
+    <main className="min-h-screen bg-background p-8 flex items-center justify-center">
+      <Card className="w-full max-w-lg">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-2xl">AI Generation Studio</CardTitle>
+            <Badge>Ready</Badge>
+          </div>
+          <CardDescription>
+            Sandpack 沙箱已就绪，预置了 shadcn/ui 组件和 TailwindCSS 主题。
+          </CardDescription>
+        </CardHeader>
 
-.page {
-	min-height: 100vh;
-	display: grid;
-	place-items: center;
-	padding: 28px;
-}
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            在左侧输入你的需求描述，AI 将自动生成使用 shadcn 组件和
+            Tailwind CSS 的 React 代码。
+          </p>
+          <Separator />
+          <div className="flex gap-2">
+            <Input placeholder="搜索组件..." className="flex-1" />
+            <Button>搜索</Button>
+          </div>
+        </CardContent>
 
-.hero-card {
-	width: min(720px, 94vw);
-	border-radius: 20px;
-	border: 1px solid #dbe4ee;
-	padding: 30px;
-	background: rgba(255, 255, 255, 0.86);
-	box-shadow: 0 24px 80px rgba(15, 23, 42, 0.14);
-	backdrop-filter: blur(4px);
-}
-
-.badge {
-	display: inline-flex;
-	margin: 0;
-	border-radius: 999px;
-	padding: 6px 10px;
-	font-size: 12px;
-	letter-spacing: 0.04em;
-	color: #0f766e;
-	background: #ccfbf1;
-}
-
-h1 {
-	margin: 14px 0 10px;
-	font-size: clamp(28px, 5vw, 44px);
-	line-height: 1.1;
-}
-
-p {
-	margin: 0;
-	color: #334155;
-	line-height: 1.6;
-}
-
-.actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-	margin-top: 20px;
-}
-
-button {
-	border: 0;
-	border-radius: 12px;
-	padding: 10px 16px;
-	font-weight: 600;
-	cursor: pointer;
-	background: #0f172a;
-	color: #fff;
-}
-
-button.ghost {
-	border: 1px solid #cbd5e1;
-	background: #fff;
-	color: #0f172a;
+        <CardFooter className="gap-2">
+          <Button variant="default">开始使用</Button>
+          <Button variant="outline">查看文档</Button>
+          <Button variant="ghost">重置</Button>
+        </CardFooter>
+      </Card>
+    </main>
+  );
 }
 `,
   },

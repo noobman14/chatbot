@@ -11,7 +11,6 @@ import {
   DEFAULT_ACTIVE_FILE,
   DEFAULT_EXTERNAL_RESOURCES,
   DEFAULT_VISIBLE_FILES,
-  EXAMPLE_PROMPTS,
   HISTORY_PAGE_SIZE,
   MODEL_OPTIONS,
   PREVIEW_MAX_WIDTH,
@@ -352,8 +351,8 @@ export default function CodeRouteSandpack() {
 
     try {
       const result = currentRecordId
-        ? await api.patchSandpackCode(currentRecordId, trimmedPrompt, model, 60000)
-        : await api.generateSandpackCode(trimmedPrompt, model, 60000);
+        ? await api.patchSandpackCode(currentRecordId, trimmedPrompt, model, 32768)
+        : await api.generateSandpackCode(trimmedPrompt, model, 32768);
       applySandpackPayload(result);
 
       const diagnosticsCount = Array.isArray(result.diagnostics) ? result.diagnostics.length : 0;
@@ -446,7 +445,6 @@ export default function CodeRouteSandpack() {
                 dialogueMessages={dialogueMessages}
                 dialogueScrollRef={dialogueScrollRef}
                 isGenerating={isGenerating}
-                examplePrompts={EXAMPLE_PROMPTS}
                 dialogueInput={dialogueInput}
                 onDialogueInputChange={setDialogueInput}
                 onExamplePromptClick={setDialogueInput}

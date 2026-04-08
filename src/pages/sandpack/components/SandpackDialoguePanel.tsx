@@ -24,7 +24,7 @@ type SandpackDialoguePanelProps = {
   dialogueMessages: SandpackDialogueMessage[];
   dialogueScrollRef: RefObject<HTMLDivElement | null>;
   isGenerating: boolean;
-  examplePrompts: string[];
+  examplePrompts?: string[];
   dialogueInput: string;
   onDialogueInputChange: (value: string) => void;
   onExamplePromptClick: (prompt: string) => void;
@@ -133,18 +133,7 @@ export function SandpackDialoguePanel(props: SandpackDialoguePanelProps) {
       </div>
 
       <div className="shrink-0 space-y-3 border-t border-border p-4">
-        <div className="grid grid-cols-1 gap-2">
-          {examplePrompts.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className="rounded-lg border border-border bg-card/50 px-3 py-2 text-left text-[11px] text-foreground transition-all hover:border-primary/50 hover:bg-card"
-              onClick={() => onExamplePromptClick(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+
 
         <Textarea
           value={dialogueInput}
